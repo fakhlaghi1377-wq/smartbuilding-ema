@@ -257,6 +257,29 @@ async function recordNonClaim(responseType, button) {
     showView("success");
 }
 
+
+function getTehranTimestamp() {
+    const now = new Date();
+    const parts = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Tehran",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hourCycle: "h23",
+    }).formatToParts(now);
+
+    const values = Object.fromEntries(
+        parts.filter((part) => part.type !== "literal")
+            .map((part) => [part.type, part.value])
+    );
+
+    return `${values.year}-${values.month}-${values.day}` +
+        `T${values.hour}:${values.minute}:${values.second}+03:30`;
+}
+
 function numericValue(formData, key) {
     const value = formData.get(key);
     return value === null ? null : Number(value);
@@ -271,7 +294,7 @@ async function submitSurvey(event) {
     const formData = new FormData(form);
 
     const answers = {
-        questionnaire_version: "EMA_WINDOW_OPEN_V2_2",
+        questionnaire_version: "EMA_WINDOW_OPEN_V2_3",
         opening_reason: formData.get("opening_reason"),
         opening_reason_other: formData.get("opening_reason") === "other"
             ? String(formData.get("opening_reason_other") || "").trim()
@@ -293,7 +316,9 @@ async function submitSurvey(event) {
             : formData.get("hvac_mode"),
         air_source: formData.get("air_source"),
         overall_comfort: numericValue(formData, "overall_comfort"),
-        client_submitted_at: new Date().toISOString(),
+        client_submitted_at: getTehranTimestamp(),
+        client_submitted_at_utc: new Date().toISOString(),
+        client_timezone: "Asia/Tehran",
     };
 
     setBusy(submitButton, true);
