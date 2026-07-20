@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+    <meta name="theme-color" content="#0f766e">
+    <title>پرسشنامه باز شدن پنجره</title>
+    <link rel="stylesheet" href="./survey.css">
+</head>
+<body>
+    <main class="survey-shell">
+        <section class="survey-card">
+            <div class="brand-row">
+                <div class="brand-icon">⌂</div>
+                <div>
+                    <h1>مطالعه کیفیت محیط داخل</h1>
+                    <p>پرسشنامه کوتاه باز شدن پنجره</p>
+                </div>
+            </div>
+
+            <div id="loading-view" class="view active">
+                <div class="spinner"></div>
+                <p>در حال دریافت پرسشنامه...</p>
+            </div>
+
+            <div id="error-view" class="view">
+                <div class="message-icon error-icon">!</div>
+                <h2>امکان نمایش پرسشنامه نیست</h2>
+                <p id="error-message">لینک پرسشنامه معتبر نیست.</p>
+            </div>
+
+            <div id="claim-view" class="view">
+                <div class="event-box">
+                    <span>رویداد ثبت‌شده</span>
+                    <strong id="event-time">--</strong>
+                    <small id="occupant-code">--</small>
+                </div>
+
+                <h2>آیا شما پنجره را باز کردید؟</h2>
+                <p class="helper-text">
+                    فقط فردی که پنجره را باز کرده است گزینه «بله» را انتخاب کند.
+                </p>
+
+                <div class="button-stack">
+                    <button id="claim-button" class="button primary">
+                        بله، من پنجره را باز کردم
+                    </button>
+                    <button id="decline-button" class="button secondary">
+                        خیر، من باز نکردم
+                    </button>
+                    <button id="unsure-button" class="button ghost">
+                        مطمئن نیستم
+                    </button>
+                </div>
+            </div>
+
+            <form id="survey-form" class="view">
+                <div class="progress-row">
+                    <span>پرسشنامه کوتاه</span>
+                    <strong>کمتر از ۳۰ ثانیه</strong>
+                </div>
+
+                <fieldset>
+                    <legend>دلیل اصلی باز کردن پنجره چه بود؟</legend>
+                    <div class="option-grid">
+                        <label><input type="radio" name="opening_reason" value="too_warm" required><span>هوا گرم بود</span></label>
+                        <label><input type="radio" name="opening_reason" value="fresh_air"><span>نیاز به هوای تازه</span></label>
+                        <label><input type="radio" name="opening_reason" value="odor_smoke"><span>بو یا دود</span></label>
+                        <label><input type="radio" name="opening_reason" value="humidity"><span>رطوبت زیاد</span></label>
+                        <label><input type="radio" name="opening_reason" value="cooking"><span>آشپزی</span></label>
+                        <label><input type="radio" name="opening_reason" value="habit"><span>عادت شخصی</span></label>
+                        <label><input type="radio" name="opening_reason" value="other"><span>دلیل دیگر</span></label>
+                    </div>
+                </fieldset>
+
+                <fieldset>
+                    <legend>در حال حاضر از نظر دمایی چه احساسی دارید؟</legend>
+                    <div class="scale-grid seven">
+                        <label><input type="radio" name="thermal_sensation" value="-3" required><span>خیلی سرد</span></label>
+                        <label><input type="radio" name="thermal_sensation" value="-2"><span>سرد</span></label>
+                        <label><input type="radio" name="thermal_sensation" value="-1"><span>کمی سرد</span></label>
+                        <label><input type="radio" name="thermal_sensation" value="0"><span>خنثی</span></label>
+                        <label><input type="radio" name="thermal_sensation" value="1"><span>کمی گرم</span></label>
+                        <label><input type="radio" name="thermal_sensation" value="2"><span>گرم</span></label>
+                        <label><input type="radio" name="thermal_sensation" value="3"><span>خیلی گرم</span></label>
+                    </div>
+                </fieldset>
+
+                <fieldset>
+                    <legend>کیفیت هوای داخل را چگونه ارزیابی می‌کنید؟</legend>
+                    <div class="scale-grid five">
+                        <label><input type="radio" name="air_quality" value="1" required><span>خیلی بد</span></label>
+                        <label><input type="radio" name="air_quality" value="2"><span>بد</span></label>
+                        <label><input type="radio" name="air_quality" value="3"><span>متوسط</span></label>
+                        <label><input type="radio" name="air_quality" value="4"><span>خوب</span></label>
+                        <label><input type="radio" name="air_quality" value="5"><span>خیلی خوب</span></label>
+                    </div>
+                </fieldset>
+
+                <fieldset>
+                    <legend>انتظار دارید پنجره چه مدت باز بماند؟</legend>
+                    <div class="option-grid">
+                        <label><input type="radio" name="expected_duration" value="under_5" required><span>کمتر از ۵ دقیقه</span></label>
+                        <label><input type="radio" name="expected_duration" value="5_15"><span>۵ تا ۱۵ دقیقه</span></label>
+                        <label><input type="radio" name="expected_duration" value="15_30"><span>۱۵ تا ۳۰ دقیقه</span></label>
+                        <label><input type="radio" name="expected_duration" value="over_30"><span>بیشتر از ۳۰ دقیقه</span></label>
+                        <label><input type="radio" name="expected_duration" value="unknown"><span>نمی‌دانم</span></label>
+                    </div>
+                </fieldset>
+
+                <button id="submit-button" type="submit" class="button primary submit-button">
+                    ثبت پاسخ
+                </button>
+                <p id="form-error" class="form-error"></p>
+            </form>
+
+            <div id="success-view" class="view">
+                <div class="message-icon success-icon">✓</div>
+                <h2>پاسخ شما ثبت شد</h2>
+                <p>از همکاری شما سپاسگزاریم. می‌توانید این صفحه را ببندید.</p>
+            </div>
+
+            <div id="closed-view" class="view">
+                <div class="message-icon neutral-icon">✓</div>
+                <h2>این رویداد قبلاً ثبت شده است</h2>
+                <p>فرد دیگری این پرسشنامه را پذیرفته یا تکمیل کرده است.</p>
+            </div>
+
+            <footer>
+                پاسخ‌ها با کد ناشناس ذخیره می‌شوند و نام واقعی نمایش داده نمی‌شود.
+            </footer>
+        </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="./survey.js"></script>
+</body>
+</html>
