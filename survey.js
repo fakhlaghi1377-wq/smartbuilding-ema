@@ -1,6 +1,6 @@
 // Replace these two values with your Supabase project settings.
 // Supabase Dashboard -> Project Settings -> API
-const SUPABASE_URL = "https://https://rarytoivpexnqfdtebsx.supabase.co";
+const SUPABASE_URL = "https://rarytoivpexnqfdtebsx.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_Mv7kzCdhAytHLGszxBDpeA_zEoexIiC";
 
 const client = window.supabase.createClient(
