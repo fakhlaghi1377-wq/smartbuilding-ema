@@ -268,3 +268,69 @@ footer {
     .wizard-actions { grid-template-columns: 1fr 1fr; }
     legend { font-size: 17px; }
 }
+
+.other-input-wrap {
+    margin-top: 14px;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: #f8fafc;
+}
+
+.other-input-label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--text);
+    font-weight: 700;
+    cursor: default;
+}
+
+.other-input-wrap textarea {
+    width: 100%;
+    min-height: 86px;
+    resize: vertical;
+    padding: 11px 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: #fff;
+    color: var(--text);
+    font: inherit;
+    line-height: 1.7;
+}
+
+.other-input-wrap textarea:focus {
+    outline: 3px solid rgba(15, 118, 110, 0.18);
+    border-color: var(--primary);
+}
+
+
+.conditional-panel {
+    margin-top: 16px;
+    padding: 14px;
+    border: 1px solid #bce4de;
+    border-radius: 12px;
+    background: #f0fdfa;
+}
+
+.conditional-title {
+    margin: 0 0 10px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.option-grid.three-column {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (max-width: 600px) {
+    .option-grid.three-column {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .option-grid.three-column label span {
+        min-height: 50px;
+        place-items: center;
+        padding: 8px 4px;
+        text-align: center;
+    }
+}
