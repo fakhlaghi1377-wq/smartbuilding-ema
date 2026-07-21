@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+    <meta name="theme-color" content="#0f766e">
+    <title>پرسشنامه روزانه کیفیت محیط داخل</title>
+    <link rel="stylesheet" href="./daily.css">
+</head>
+<body>
+<main class="survey-shell">
+<section class="survey-card">
+    <div class="brand-row">
+        <div class="brand-icon">⌂</div>
+        <div>
+            <h1>مطالعه کیفیت محیط داخل</h1>
+            <p>پرسشنامه روزانه آسایش و شرایط محیط</p>
+            <span id="survey-slot-badge" class="slot-badge hidden">--</span>
+        </div>
+    </div>
+
+    <div id="loading-view" class="view active">
+        <div class="spinner"></div>
+        <p>در حال دریافت پرسشنامه...</p>
+    </div>
+
+    <div id="error-view" class="view">
+        <div class="message-icon error-icon">!</div>
+        <h2>امکان نمایش پرسشنامه نیست</h2>
+        <p id="error-message">لینک پرسشنامه معتبر نیست.</p>
+    </div>
+
+    <div id="intro-view" class="view">
+        <div class="event-box">
+            <span>نوبت پرسشنامه</span>
+            <strong id="scheduled-time">--</strong>
+            <small id="occupant-code">--</small>
+        </div>
+        <h2>پرسشنامه روزانه</h2>
+        <p class="helper-text">
+            پاسخ‌دادن حدود ۳ تا ۵ دقیقه زمان می‌برد. لطفاً شرایط فعلی خود و محیط را ثبت کنید.
+        </p>
+        <div class="button-stack">
+            <button id="start-button" class="button primary">شروع پرسشنامه</button>
+        </div>
+    </div>
+
+    <form id="survey-form" class="view" novalidate>
+        <div class="progress-row">
+            <span id="progress-label">سؤال ۱ از ۱۸</span>
+            <strong>حدود ۳ تا ۵ دقیقه</strong>
+        </div>
+        <div class="progress-track" aria-hidden="true">
+            <div id="progress-bar" class="progress-bar"></div>
+        </div>
+
+        <section class="survey-step active">
+            <fieldset>
+                <legend>اکنون در کدام فضا هستید؟</legend>
+                <div class="option-grid single-column">
+                    <label><input type="radio" name="current_room" value="living_room" required><span>اتاق نشیمن</span></label>
+                    <label><input type="radio" name="current_room" value="bedroom"><span>اتاق خواب</span></label>
+                    <label><input type="radio" name="current_room" value="kitchen"><span>آشپزخانه</span></label>
+                    <label><input type="radio" name="current_room" value="work_study"><span>فضای کار یا مطالعه</span></label>
+                    <label><input type="radio" name="current_room" value="outside_building"><span>خارج از ساختمان</span></label>
+                    <label><input type="radio" name="current_room" value="other"><span>سایر</span></label>
+                </div>
+                <div id="current-room-other-wrap" class="other-input-wrap hidden">
+                    <label for="current_room_other" class="other-input-label">نام فضا را بنویسید:</label>
+                    <textarea id="current_room_other" name="current_room_other" rows="3" maxlength="250"></textarea>
+                </div>
+            </fieldset>
+        </section>
+
+        <section class="survey-step">
+            <fieldset>
+                <legend>در حال حاضر چند نفر در این فضا حضور دارند؟</legend>
+                <div class="option-grid single-column">
+                    <label><input type="radio" name="occupancy_count" value="1" required><span>فقط خودم</span></label>
+                    <label><input type="radio" name="occupancy_count" value="2"><span>۲ نفر</span></label>
+                    <label><input type="radio" name="occupancy_count" value="3"><span>۳ نفر</span></label>
+                    <label><input type="radio" name="occupancy_count" value="4"><span>۴ نفر</span></label>
+                    <label><input type="radio" name="occupancy_count" value="5_plus"><span>۵ نفر یا بیشتر</span></label>
+                </div>
+            </fieldset>
+        </section>
+
+        <section class="survey-step">
+            <fieldset>
+                <legend>وضعیت لباس شما چگونه است؟</legend>
+                <p class="question-note">گزینه‌ای را انتخاب کنید که به پوشش فعلی شما نزدیک‌تر است.</p>
+                <div class="option-grid single-column">
+                    <label><input type="radio" name="clothing_level" value="very_light" required><span>بسیار سبک؛ مانند تی‌شرت و شلوارک</span></label>
+                    <label><input type="radio" name="clothing_level" value="light"><span>سبک؛ مانند تی‌شرت و شلوار سبک</span></label>
+                    <label><input type="radio" name="clothing_level" value="normal"><span>معمولی؛ لباس رایج داخل خانه</span></label>
+                    <label><input type="radio" name="clothing_level" value="warm"><span>نسبتاً گرم؛ مانند لباس آستین‌بلند</span></label>
+                    <label><input type="radio" name="clothing_level" value="very_warm"><span>گرم؛ مانند ژاکت یا لباس چندلایه</span></label>
+                </div>
+            </fieldset>
+        </section>
+
+        <section class="survey-step"><fieldset>
+            <legend>اکنون دمای محیط را چگونه احساس می‌کنید؟</legend>
+            <div class="scale-grid seven">
+                <label><input type="radio" name="thermal_sensation" value="-3" required><span>خیلی سرد</span></label>
+                <label><input type="radio" name="thermal_sensation" value="-2"><span>سرد</span></label>
+                <label><input type="radio" name="thermal_sensation" value="-1"><span>کمی سرد</span></label>
+                <label><input type="radio" name="thermal_sensation" value="0"><span>خنثی</span></label>
+                <label><input type="radio" name="thermal_sensation" value="1"><span>کمی گرم</span></label>
+                <label><input type="radio" name="thermal_sensation" value="2"><span>گرم</span></label>
+                <label><input type="radio" name="thermal_sensation" value="3"><span>خیلی گرم</span></label>
+            </div>
+        </fieldset></section>
+
+        <section class="survey-step"><fieldset>
+            <legend>ترجیح می‌دهید دمای محیط چگونه باشد؟</legend>
+            <div class="scale-grid seven">
+                <label><input type="radio" name="thermal_preference" value="-3" required><span>خیلی گرم‌تر</span></label>
+                <label><input type="radio" name="thermal_preference" value="-2"><span>گرم‌تر</span></label>
+                <label><input type="radio" name="thermal_preference" value="-1"><span>کمی گرم‌تر</span></label>
+                <label><input type="radio" name="thermal_preference" value="0"><span>بدون تغییر</span></label>
+                <label><input type="radio" name="thermal_preference" value="1"><span>کمی خنک‌تر</span></label>
+                <label><input type="radio" name="thermal_preference" value="2"><span>خنک‌تر</span></label>
+                <label><input type="radio" name="thermal_preference" value="3"><span>خیلی خنک‌تر</span></label>
+            </div>
+        </fieldset></section>
+
+        <section class="survey-step"><fieldset>
+            <legend>چقدر از دمای محیط رضایت دارید؟</legend>
+            <div class="scale-grid seven">
+                <label><input type="radio" name="temperature_satisfaction" value="1" required><span>بسیار ناراضی</span></label>
+                <label><input type="radio" name="temperature_satisfaction" value="2"><span>ناراضی</span></label>
+                <label><input type="radio" name="temperature_satisfaction" value="3"><span>کمی ناراضی</span></label>
+                <label><input type="radio" name="temperature_satisfaction" value="4"><span>نه راضی نه ناراضی</span></label>
+                <label><input type="radio" name="temperature_satisfaction" value="5"><span>کمی راضی</span></label>
+                <label><input type="radio" name="temperature_satisfaction" value="6"><span>راضی</span></label>
+                <label><input type="radio" name="temperature_satisfaction" value="7"><span>بسیار راضی</span></label>
+            </div>
+        </fieldset></section>
+
+        <section class="survey-step"><fieldset>
+            <legend>هوای محیط را از نظر تازگی چگونه ارزیابی می‌کنید؟</legend>
+            <div class="scale-grid seven">
+                <label><input type="radio" name="air_freshness" value="-3" required><span>بسیار مانده</span></label>
+                <label><input type="radio" name="air_freshness" value="-2"><span>مانده</span></label>
+                <label><input type="radio" name="air_freshness" value="-1"><span>کمی مانده</span></label>
+                <label><input type="radio" name="air_freshness" value="0"><span>متوسط</span></label>
+                <label><input type="radio" name="air_freshness" value="1"><span>نسبتاً تازه</span></label>
+                <label><input type="radio" name="air_freshness" value="2"><span>تازه</span></label>
+                <label><input type="radio" name="air_freshness" value="3"><span>بسیار تازه</span></label>
+            </div>
+        </fieldset></section>
+
+        <section class="survey-step"><fieldset>
+            <legend>حرکت هوا را چگونه احساس می‌کنید؟</legend>
+            <div class="scale-grid five">
+                <label><input type="radio" name="air_movement" value="1" required><span>اصلاً احساس نمی‌شود</span></label>
+                <label><input type="radio" name="air_movement" value="2"><span>کم</span></label>
+                <label><input type="radio" name="air_movement" value="3"><span>متوسط</span></label>
+                <label><input type="radio" name="air_movement" value="4"><span>زیاد</span></label>
+                <label><input type="radio" name="air_movement" value="5"><span>بسیار زیاد</span></label>
+            </div>
+        </fieldset></section>
+
+        <section class="survey-step"><fieldset>
+            <legend>رطوبت محیط را چگونه احساس می‌کنید؟</legend>
+            <div class="scale-grid seven">
+                <label><input type="radio" name="humidity_perception" value="-3" required><span>بسیار خشک</span></label>
+                <label><input type="radio" name="humidity_perception" value="-2"><span>خشک</span></label>
+                <label><input type="radio" name="humidity_perception" value="-1"><span>کمی خشک</span></label>
+                <label><input type="radio" name="humidity_perception" value="0"><span>مناسب</span></label>
+                <label><input type="radio" name="humidity_perception" value="1"><span>کمی مرطوب</span></label>
+                <label><input type="radio" name="humidity_perception" value="2"><span>مرطوب</span></label>
+                <label><input type="radio" name="humidity_perception" value="3"><span>بسیار مرطوب</span></label>
+            </div>
+        </fieldset></section>
+
+        <section class="survey-step"><fieldset>
+            <legend>آیا بوی ناخوشایندی احساس می‌کنید؟</legend>
+            <div class="option-grid single-column">
+                <label><input type="radio" name="odor_level" value="none" required><span>خیر</span></label>
+                <label><input type="radio" name="odor_level" value="low"><span>بله، کم</span></label>
+                <label><input type="radio" name="odor_level" value="medium"><span>بله، متوسط</span></label>
+                <label><input type="radio" name="odor_level" value="high"><span>بله، زیاد</span></label>
+            </div>
+            <div id="odor-description-wrap" class="other-input-wrap hidden">
+                <label for="odor_description" class="other-input-label">در صورت تمایل، نوع بو را توضیح دهید:</label>
+                <textarea id="odor_description" name="odor_description" rows="3" maxlength="250"></textarea>
+            </div>
+        </fieldset></section>
+
+        <section class="survey-step"><fieldset>
+            <legend>میزان روشنایی محیط چگونه است؟</legend>
+            <div class="scale-grid five">
+                <label><input type="radio" name="light_level" value="1" required><span>بسیار کم</span></label>
+                <label><input type="radio" name="light_level" value="2"><span>کم</span></label>
+                <label><input type="radio" name="light_level" value="3"><span>مناسب</span></label>
+                <label><input type="radio" name="light_level" value="4"><span>زیاد</span></label>
+                <label><input type="radio" name="light_level" value="5"><span>بسیار زیاد</span></label>
+            </div>
+        </fieldset></section>
+
+        <section class="survey-step"><fieldset>
+            <legend>آیا نور باعث خیرگی یا ناراحتی چشم می‌شود؟</legend>
+            <div class="scale-grid five">
+                <label><input type="radio" name="glare_level" value="1" required><span>اصلاً</span></label>
+                <label><input type="radio" name="glare_level" value="2"><span>کم</span></label>
+                <label><input type="radio" name="glare_level" value="3"><span>متوسط</span></label>
+                <label><input type="radio" name="glare_level" value="4"><span>زیاد</span></label>
+                <label><input type="radio" name="glare_level" value="5"><span>بسیار زیاد</span></label>
+            </div>
+        </fieldset></section>
+
+        <section class="survey-step"><fieldset>
+            <legend>وضعیت صدای محیط چگونه است؟</legend>
+            <div class="scale-grid five">
+                <label><input type="radio" name="noise_level" value="1" required><span>بسیار آرام</span></label>
+                <label><input type="radio" name="noise_level" value="2"><span>آرام</span></label>
+                <label><input type="radio" name="noise_level" value="3"><span>قابل قبول</span></label>
+                <label><input type="radio" name="noise_level" value="4"><span>پرصدا</span></label>
+                <label><input type="radio" name="noise_level" value="5"><span>بسیار پرصدا</span></label>
+            </div>
+        </fieldset></section>
+
+        <section class="survey-step"><fieldset>
+            <legend>سیستم سرمایش، گرمایش یا فن اکنون روی چه وضعیتی است؟</legend>
+            <div class="option-grid single-column">
+                <label><input type="radio" name="hvac_mode" value="off" required><span>خاموش</span></label>
+                <label><input type="radio" name="hvac_mode" value="fan"><span>فقط فن</span></label>
+                <label><input type="radio" name="hvac_mode" value="cooling"><span>سرمایش</span></label>
+                <label><input type="radio" name="hvac_mode" value="heating"><span>گرمایش</span></label>
+                <label><input type="radio" name="hvac_mode" value="auto"><span>حالت خودکار</span></label>
+                <label><input type="radio" name="hvac_mode" value="unknown"><span>نمی‌دانم</span></label>
+            </div>
+            <div id="hvac-speed-wrap" class="conditional-panel hidden">
+                <p class="conditional-title">دور دستگاه را انتخاب کنید:</p>
+                <div class="option-grid three-column">
+                    <label><input type="radio" name="hvac_speed" value="low"><span>کند</span></label>
+                    <label><input type="radio" name="hvac_speed" value="medium"><span>متوسط</span></label>
+                    <label><input type="radio" name="hvac_speed" value="high"><span>تند</span></label>
+                </div>
+            </div>
+        </fieldset></section>
+
+        <section class="survey-step"><fieldset>
+            <legend>منبع اصلی جریان هوا چیست؟</legend>
+            <div class="option-grid single-column">
+                <label><input type="radio" name="airflow_source" value="window" required><span>پنجره</span></label>
+                <label><input type="radio" name="airflow_source" value="hvac_vent"><span>دریچه سیستم</span></label>
+                <label><input type="radio" name="airflow_source" value="fan"><span>پنکه</span></label>
+                <label><input type="radio" name="airflow_source" value="multiple"><span>چند منبع هم‌زمان</span></label>
+                <label><input type="radio" name="airflow_source" value="none"><span>هیچ‌کدام</span></label>
+                <label><input type="radio" name="airflow_source" value="unknown"><span>نمی‌دانم</span></label>
+                <label><input type="radio" name="airflow_source" value="other"><span>سایر</span></label>
+            </div>
+            <div id="airflow-source-other-wrap" class="other-input-wrap hidden">
+                <label for="airflow_source_other" class="other-input-label">منبع جریان هوا را بنویسید:</label>
+                <textarea id="airflow_source_other" name="airflow_source_other" rows="3" maxlength="250"></textarea>
+            </div>
+        </fieldset></section>
+
+        <section class="survey-step"><fieldset>
+            <legend>اکنون چقدر احساس خواب‌آلودگی دارید؟</legend>
+            <div class="scale-grid five">
+                <label><input type="radio" name="sleepiness" value="1" required><span>اصلاً</span></label>
+                <label><input type="radio" name="sleepiness" value="2"><span>کمی</span></label>
+                <label><input type="radio" name="sleepiness" value="3"><span>متوسط</span></label>
+                <label><input type="radio" name="sleepiness" value="4"><span>زیاد</span></label>
+                <label><input type="radio" name="sleepiness" value="5"><span>بسیار زیاد</span></label>
+            </div>
+        </fieldset></section>
+
+        <section class="survey-step"><fieldset>
+            <legend>در مجموع چقدر در این محیط احساس راحتی می‌کنید؟</legend>
+            <div class="scale-grid seven">
+                <label><input type="radio" name="overall_comfort" value="1" required><span>بسیار ناراحت</span></label>
+                <label><input type="radio" name="overall_comfort" value="2"><span>ناراحت</span></label>
+                <label><input type="radio" name="overall_comfort" value="3"><span>کمی ناراحت</span></label>
+                <label><input type="radio" name="overall_comfort" value="4"><span>خنثی</span></label>
+                <label><input type="radio" name="overall_comfort" value="5"><span>کمی راحت</span></label>
+                <label><input type="radio" name="overall_comfort" value="6"><span>راحت</span></label>
+                <label><input type="radio" name="overall_comfort" value="7"><span>بسیار راحت</span></label>
+            </div>
+        </fieldset></section>
+
+        <section class="survey-step"><fieldset>
+            <legend>آیا از زمان پرسشنامه قبلی پنجره‌ای را بسته‌اید؟</legend>
+            <div class="option-grid single-column">
+                <label><input type="radio" name="window_closed_since_previous" value="no" required><span>خیر</span></label>
+                <label><input type="radio" name="window_closed_since_previous" value="yes"><span>بله</span></label>
+                <label><input type="radio" name="window_closed_since_previous" value="unsure"><span>مطمئن نیستم</span></label>
+            </div>
+            <div id="closing-reason-wrap" class="conditional-panel hidden">
+                <p class="conditional-title">دلیل اصلی بستن پنجره چه بود؟</p>
+                <div class="option-grid single-column">
+                    <label><input type="radio" name="window_closing_reason" value="felt_cold"><span>احساس سرما</span></label>
+                    <label><input type="radio" name="window_closing_reason" value="outside_too_hot"><span>هوای بیرون خیلی گرم بود</span></label>
+                    <label><input type="radio" name="window_closing_reason" value="outside_noise"><span>سر و صدای بیرون</span></label>
+                    <label><input type="radio" name="window_closing_reason" value="outside_pollution_odor"><span>آلودگی یا بوی بیرون</span></label>
+                    <label><input type="radio" name="window_closing_reason" value="strong_wind"><span>باد شدید</span></label>
+                    <label><input type="radio" name="window_closing_reason" value="rain"><span>بارندگی</span></label>
+                    <label><input type="radio" name="window_closing_reason" value="hvac_started"><span>روشن شدن سرمایش یا گرمایش</span></label>
+                    <label><input type="radio" name="window_closing_reason" value="privacy"><span>حفظ حریم خصوصی</span></label>
+                    <label><input type="radio" name="window_closing_reason" value="left_room"><span>ترک کردن اتاق</span></label>
+                    <label><input type="radio" name="window_closing_reason" value="habit"><span>عادت</span></label>
+                    <label><input type="radio" name="window_closing_reason" value="closed_by_other"><span>شخص دیگری پنجره را بست</span></label>
+                    <label><input type="radio" name="window_closing_reason" value="other"><span>سایر</span></label>
+                </div>
+                <div id="window-closing-reason-other-wrap" class="other-input-wrap hidden">
+                    <label for="window_closing_reason_other" class="other-input-label">دلیل را کوتاه بنویسید:</label>
+                    <textarea id="window_closing_reason_other" name="window_closing_reason_other" rows="3" maxlength="250"></textarea>
+                </div>
+            </div>
+        </fieldset></section>
+
+        <p id="form-error" class="form-error" aria-live="polite"></p>
+        <div class="wizard-actions">
+            <button id="previous-button" type="button" class="button ghost compact-button hidden">سؤال قبلی</button>
+            <button id="next-button" type="button" class="button primary compact-button">سؤال بعدی</button>
+            <button id="submit-button" type="submit" class="button primary compact-button hidden">ثبت پاسخ‌ها</button>
+        </div>
+    </form>
+
+    <div id="success-view" class="view">
+        <div class="message-icon success-icon">✓</div>
+        <h2>پاسخ شما ثبت شد</h2>
+        <p>از همکاری شما سپاسگزاریم. می‌توانید این صفحه را ببندید.</p>
+    </div>
+
+    <div id="closed-view" class="view">
+        <div class="message-icon neutral-icon">✓</div>
+        <h2>این پرسشنامه قبلاً تکمیل شده است</h2>
+        <p>برای این نوبت، پاسخ دیگری قابل ثبت نیست.</p>
+    </div>
+
+    <footer>پاسخ‌ها با کد ناشناس ذخیره می‌شوند و نام واقعی نمایش داده نمی‌شود.</footer>
+</section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="./daily.js"></script>
+</body>
+</html>
