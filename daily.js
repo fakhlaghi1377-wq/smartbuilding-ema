@@ -226,10 +226,15 @@ async function loadSurvey() {
     });
 
     if (error) {
-        console.error(error);
-        showError("ارتباط با سرور ابری برقرار نشد. اتصال اینترنت را بررسی کنید.");
-        return;
-    }
+    console.error("SUPABASE ERROR:", error);
+    console.error("ERROR MESSAGE:", error.message);
+    console.error("ERROR DETAILS:", error.details);
+    console.error("ERROR HINT:", error.hint);
+
+    formError.textContent =
+        error.message || "خطای ثبت پاسخ";
+    return;
+}
 
     const survey = Array.isArray(data) ? data[0] : data;
 
