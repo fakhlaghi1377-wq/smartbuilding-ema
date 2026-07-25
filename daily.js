@@ -1,12 +1,3 @@
-// Supabase Dashboard -> Project Settings -> API
-const SUPABASE_URL = "https://rarytoivpexnqfdtebsx.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_Mv7kzCdhAytHLGszxBDpeA_zEoexIiC";
-
-const client = window.supabase.createClient(
-    SUPABASE_URL,
-    SUPABASE_PUBLISHABLE_KEY
-);
-
 const params = new URLSearchParams(window.location.search);
 const eventId = params.get("event");
 const accessToken = params.get("token");
@@ -32,8 +23,15 @@ let currentStepIndex = 0;
 let loadedSurvey = null;
 
 function showView(name) {
-    Object.values(views).forEach((view) => view.classList.remove("active"));
-    views[name].classList.add("active");
+    Object.values(views).forEach((view) => {
+        if (view) {
+            view.classList.remove("active");
+        }
+    });
+
+    if (views[name]) {
+        views[name].classList.add("active");
+    }
 }
 
 function setBusy(button, busy) {
@@ -215,23 +213,20 @@ function validateCurrentStep() {
 }
 
 async function loadSurvey() {
-    if (!eventId || !accessToken) {
-        showError("شناسه پرسشنامه یا توکن ساکن در لینک وجود ندارد.");
+    if (!accessToken) {
+        showError("توکن پرسشنامه در لینک وجود ندارد.");
         return;
     }
 
-    const { data, error } = await client.rpc("get_daily_survey", {
-        p_event_id: eventId,
-        p_access_token: accessToken,
-    });
-
-    if (error) {
+    let survey;
+    try {
+        const loaded = await window.CloudSurveyApi.load(accessToken, eventId);
+        survey = loaded.event;
+    } catch (error) {
         console.error(error);
-        showError("ارتباط با سرور ابری برقرار نشد. اتصال اینترنت را بررسی کنید.");
+        showError("پرسشنامه هنوز روی این گوشی ذخیره نشده و ارتباط اینترنتی برقرار نیست.");
         return;
     }
-
-    const survey = Array.isArray(data) ? data[0] : data;
 
     if (!survey) {
         showError("این لینک معتبر نیست یا پرسشنامه منقضی شده است.");
@@ -240,20 +235,20 @@ async function loadSurvey() {
 
     loadedSurvey = survey;
     document.getElementById("scheduled-time").textContent =
-        formatDateTime(survey.scheduled_at);
+        formatDateTime(survey.scheduled_for || survey.created_at);
     document.getElementById("occupant-code").textContent =
-        `کد ناشناس شما: ${survey.occupant_code}`;
+        `کد ناشناس شما: ${survey.occupant_code || "ناشناس"}`;
 
     const badge = document.getElementById("survey-slot-badge");
     badge.textContent = slotLabel(survey.survey_slot);
     badge.classList.remove("hidden");
 
-    if (survey.survey_status === "COMPLETED") {
+    if (survey.status === "COMPLETED") {
         showView("success");
         return;
     }
 
-    if (["EXPIRED", "UNANSWERED", "CLOSED"].includes(survey.survey_status)) {
+    if (["EXPIRED", "UNANSWERED", "CLOSED"].includes(survey.status)) {
         showView("closed");
         return;
     }
@@ -356,45 +351,44 @@ async function submitSurvey(event) {
 
     setBusy(submitButton, true);
 
-    const { data, error } = await client.rpc("submit_daily_survey", {
-        p_event_id: eventId,
-        p_access_token: accessToken,
-        p_answers: answers,
-    });
-
-    setBusy(submitButton, false);
-
-    if (error) {
+    try {
+        const submitted = await window.CloudSurveyApi.submit(accessToken, eventId, answers);
+        setBusy(submitButton, false);
+        if (submitted.queued) {
+            document.querySelector("#success-view p").textContent =
+                "پاسخ روی گوشی ذخیره شد و به‌محض اتصال اینترنت خودکار ارسال می‌شود.";
+        }
+        showView("success");
+    } catch (error) {
         console.error(error);
+        setBusy(submitButton, false);
         formError.textContent =
-            "پاسخ ذخیره نشد. اینترنت را بررسی کرده و دوباره تلاش کنید.";
-        return;
+            error?.data?.message || "این پرسشنامه بسته یا منقضی شده است.";
     }
-
-    const result = Array.isArray(data) ? data[0] : data;
-
-    if (result?.success === false) {
-        formError.textContent = result.message || "امکان ثبت پاسخ وجود ندارد.";
-        return;
-    }
-
-    showView("success");
 }
 
-document.getElementById("start-button").addEventListener("click", () => {
+function safeAddEventListener(element, event, callback) {
+    if (element) {
+        element.addEventListener(event, callback);
+    }
+}
+
+const startButton = document.getElementById("start-button");
+
+safeAddEventListener(startButton, "click", () => {
     currentStepIndex = 0;
     showView("survey");
     updateWizard();
 });
 
-previousButton.addEventListener("click", () => {
+safeAddEventListener(previousButton, "click", () => {
     if (currentStepIndex > 0) {
         currentStepIndex -= 1;
         updateWizard();
     }
 });
 
-nextButton.addEventListener("click", () => {
+safeAddEventListener(nextButton, "click", () => {
     if (!validateCurrentStep()) return;
     if (currentStepIndex < steps.length - 1) {
         currentStepIndex += 1;
@@ -402,8 +396,9 @@ nextButton.addEventListener("click", () => {
     }
 });
 
-document.getElementById("survey-form")
-    .addEventListener("submit", submitSurvey);
+const surveyForm = document.getElementById("survey-form");
+
+safeAddEventListener(surveyForm, "submit", submitSurvey);
 
 initializeOtherFields();
 initializeOdorField();
