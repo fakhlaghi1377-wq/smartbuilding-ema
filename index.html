@@ -18,11 +18,12 @@
     <div id="loading-view" class="view active"><div class="spinner"></div><p>در حال دریافت پرسشنامه...</p></div>
     <div id="error-view" class="view"><div class="message-icon error-icon">!</div><h2>امکان نمایش پرسشنامه نیست</h2><p id="error-message">لینک پرسشنامه معتبر نیست.</p></div>
 
-    <div id="claim-view" class="view">
+    <div id="intro-view" class="view">
         <div class="event-box"><span>رویداد ثبت‌شده</span><strong id="event-time">--</strong><small id="occupant-code">--</small></div>
         <h2>آیا شما پنجره را باز کردید؟</h2>
         <p class="helper-text">فقط فردی که پنجره را باز کرده است گزینه «بله» را انتخاب کند.</p>
         <div class="button-stack">
+            
             <button id="claim-button" class="button primary">بله، من پنجره را باز کردم</button>
             <button id="decline-button" class="button secondary">خیر، من باز نکردم</button>
             <button id="unsure-button" class="button ghost">مطمئن نیستم</button>
@@ -124,12 +125,13 @@
         </div>
     </form>
 
-    <div id="success-view" class="view"><div class="message-icon success-icon">✓</div><h2>پاسخ شما ثبت شد</h2><p>از همکاری شما سپاسگزاریم. می‌توانید این صفحه را ببندید.</p></div>
-    <div id="closed-view" class="view"><div class="message-icon neutral-icon">✓</div><h2>این رویداد قبلاً ثبت شده است</h2><p>فرد دیگری این پرسشنامه را پذیرفته یا تکمیل کرده است.</p></div>
+    <div id="success-view" class="view"><div class="message-icon success-icon">✓</div><h2>از همکاری شما سپاسگزاریم</h2><p>پاسخ شما دریافت شد. می‌توانید این صفحه را ببندید.</p></div>
+    <div id="closed-view" class="view"><div class="message-icon neutral-icon">✓</div><h2>این رویداد در انتظار پاسخ است</h2><p>این پرسشنامه هنوز برای تکمیل توسط فرد دیگری در دسترس است.</p></div>
     <footer>پاسخ‌ها با کد ناشناس ذخیره می‌شوند و نام واقعی نمایش داده نمی‌شود.</footer>
 </section>
 </main>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../survey-config.js"></script>
+<script src="../cloud-survey.js"></script>
 <script src="./survey.js"></script>
 </body>
 </html>

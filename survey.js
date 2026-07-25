@@ -1,12 +1,3 @@
-// Supabase Dashboard -> Project Settings -> API
-const SUPABASE_URL = "https://rarytoivpexnqfdtebsx.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_Mv7kzCdhAytHLGszxBDpeA_zEoexIiC";
-
-const client = window.supabase.createClient(
-    SUPABASE_URL,
-    SUPABASE_PUBLISHABLE_KEY
-);
-
 const params = new URLSearchParams(window.location.search);
 const eventId = params.get("event");
 const accessToken = params.get("token");
@@ -14,7 +5,7 @@ const accessToken = params.get("token");
 const views = {
     loading: document.getElementById("loading-view"),
     error: document.getElementById("error-view"),
-    claim: document.getElementById("claim-view"),
+    intro: document.getElementById("intro-view"),
     survey: document.getElementById("survey-form"),
     success: document.getElementById("success-view"),
     closed: document.getElementById("closed-view"),
@@ -27,11 +18,20 @@ const submitButton = document.getElementById("submit-button");
 const progressLabel = document.getElementById("progress-label");
 const progressBar = document.getElementById("progress-bar");
 const formError = document.getElementById("form-error");
+
 let currentStepIndex = 0;
+let loadedSurvey = null;
 
 function showView(name) {
-    Object.values(views).forEach((view) => view.classList.remove("active"));
-    views[name].classList.add("active");
+    Object.values(views).forEach((view) => {
+        if (view) {
+            view.classList.remove("active");
+        }
+    });
+
+    if (views[name]) {
+        views[name].classList.add("active");
+    }
 }
 
 function setBusy(button, busy) {
@@ -49,6 +49,7 @@ function formatDateTime(value) {
     if (!value) return "زمان نامشخص";
     const date = new Date(value);
     return date.toLocaleString("fa-IR", {
+        timeZone: "Asia/Tehran",
         year: "numeric",
         month: "2-digit",
         day: "2-digit",
@@ -57,31 +58,80 @@ function formatDateTime(value) {
     });
 }
 
+function slotLabel(slot) {
+    const labels = {
+        morning: "نوبت صبح؛ ساعت ۹",
+        afternoon: "نوبت بعدازظهر؛ ساعت ۱۴",
+        evening: "نوبت شب؛ ساعت ۲۰",
+    };
+    return labels[slot] || "پرسشنامه روزانه";
+}
 
-function updateOtherField(groupName) {
+function updateOtherField(groupName, wrapperId, inputName) {
     const selected = document.querySelector(`input[name="${groupName}"]:checked`);
-    const otherInput = document.querySelector(`textarea[name="${groupName}_other"]`);
-    if (!otherInput) return;
+    const wrapper = document.getElementById(wrapperId);
+    const input = document.querySelector(`[name="${inputName}"]`);
+    if (!wrapper || !input) return;
 
-    const wrapper = otherInput.closest(".other-input-wrap");
     const shouldShow = selected?.value === "other";
     wrapper.classList.toggle("hidden", !shouldShow);
-    otherInput.required = shouldShow;
-
-    if (!shouldShow) {
-        otherInput.value = "";
-    }
+    input.required = shouldShow;
+    if (!shouldShow) input.value = "";
 }
 
 function initializeOtherFields() {
-    ["opening_reason", "activity"].forEach((groupName) => {
+    const configs = [
+        ["opening_reason", "opening-reason-other-wrap", "opening_reason_other"],
+        ["activity", "activity-other-wrap", "activity_other"],
+    ];
+
+    configs.forEach(([groupName, wrapperId, inputName]) => {
         document.querySelectorAll(`input[name="${groupName}"]`).forEach((input) => {
-            input.addEventListener("change", () => updateOtherField(groupName));
+            input.addEventListener("change", () =>
+                updateOtherField(groupName, wrapperId, inputName)
+            );
         });
-        updateOtherField(groupName);
+        updateOtherField(groupName, wrapperId, inputName);
     });
 }
 
+function updateOdorDescription() {
+
+    const selected = document.querySelector(
+        'input[name="odor_level"]:checked'
+    );
+
+    const wrapper = document.getElementById(
+        "odor-description-wrap"
+    );
+
+    const descriptionInput = document.getElementById(
+        "odor_description"
+    );
+
+    if (!wrapper) {
+        return;
+    }
+
+    const shouldShow =
+        selected && selected.value !== "none";
+
+    wrapper.classList.toggle(
+        "hidden",
+        !shouldShow
+    );
+
+    if (!shouldShow && descriptionInput) {
+        descriptionInput.value = "";
+    }
+}
+
+function initializeOdorField() {
+    document.querySelectorAll('input[name="odor_level"]').forEach((input) => {
+        input.addEventListener("change", updateOdorDescription);
+    });
+    updateOdorDescription();
+}
 
 function updateHvacSpeedField() {
     const selectedMode = document.querySelector('input[name="hvac_mode"]:checked');
@@ -103,6 +153,66 @@ function initializeHvacFields() {
     updateHvacSpeedField();
 }
 
+function updateClosingReasonField() {
+    const selected = document.querySelector(
+        'input[name="window_closed_since_previous"]:checked'
+    );
+
+    const wrapper = document.getElementById(
+        "closing-reason-wrap"
+    );
+
+    const reasonInputs = Array.from(
+        document.querySelectorAll(
+            'input[name="window_closing_reason"]'
+        )
+    );
+
+    const needsReason = selected?.value === "yes";
+
+    if (wrapper) {
+        wrapper.classList.toggle(
+            "hidden",
+            !needsReason
+        );
+    }
+
+    reasonInputs.forEach((input, index) => {
+        input.required = needsReason && index === 0;
+
+        if (!needsReason) {
+            input.checked = false;
+        }
+    });
+
+    const otherInput = document.getElementById(
+        "window_closing_reason_other"
+    );
+
+    const otherWrap = document.getElementById(
+        "window-closing-reason-other-wrap"
+    );
+
+    if (!needsReason) {
+        if (otherInput) {
+            otherInput.value = "";
+        }
+
+        if (otherWrap) {
+            otherWrap.classList.add("hidden");
+        }
+    }
+}
+
+function initializeClosingReasonField() {
+    document.querySelectorAll(
+        'input[name="window_closed_since_previous"]'
+    ).forEach((input) => {
+        input.addEventListener("change", updateClosingReasonField);
+    });
+    updateClosingReasonField();
+}
+
 function updateWizard() {
     steps.forEach((step, index) => {
         step.classList.toggle("active", index === currentStepIndex);
@@ -112,18 +222,28 @@ function updateWizard() {
     progressLabel.textContent = `سؤال ${stepNumber} از ${steps.length}`;
     progressBar.style.width = `${(stepNumber / steps.length) * 100}%`;
 
-    previousButton.classList.toggle("hidden", currentStepIndex === 0);
-    nextButton.classList.toggle("hidden", currentStepIndex === steps.length - 1);
-    submitButton.classList.toggle("hidden", currentStepIndex !== steps.length - 1);
-    formError.textContent = "";
+    if (previousButton) {
+        previousButton.classList.toggle("hidden", currentStepIndex === 0);
+    }
 
+    if (nextButton) {
+        nextButton.classList.toggle("hidden", currentStepIndex === steps.length - 1);
+    }
+
+    if (submitButton) {
+        submitButton.classList.toggle("hidden", currentStepIndex !== steps.length - 1);
+    }
+
+    if (formError) {
+        formError.textContent = "";
+    }
     window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 function validateCurrentStep() {
     const currentStep = steps[currentStepIndex];
     const requiredGroups = new Set(
-        Array.from(currentStep.querySelectorAll("input[required]"))
+        Array.from(currentStep.querySelectorAll('input[type="radio"][required]'))
             .map((input) => input.name)
     );
 
@@ -138,6 +258,7 @@ function validateCurrentStep() {
     const requiredTextFields = currentStep.querySelectorAll(
         'textarea[required], input[type="text"][required]'
     );
+
     for (const field of requiredTextFields) {
         if (!field.value.trim()) {
             formError.textContent = "لطفاً گزینه «سایر» را توضیح دهید.";
@@ -151,112 +272,61 @@ function validateCurrentStep() {
 }
 
 async function loadSurvey() {
-    if (!eventId || !accessToken) {
-        showError("شناسه رویداد یا توکن ساکن در لینک وجود ندارد.");
+    if (!accessToken) {
+        showError("توکن پرسشنامه در لینک وجود ندارد.");
         return;
     }
 
-    if (!SUPABASE_URL.startsWith("https://") || !SUPABASE_PUBLISHABLE_KEY) {
-        showError("تنظیمات اتصال Supabase صحیح نیست.");
-        return;
-    }
-
-    const { data, error } = await client.rpc("get_window_survey", {
-        p_event_id: eventId,
-        p_access_token: accessToken,
-    });
-
-    if (error) {
+    let survey;
+    try {
+        const loaded = await window.CloudSurveyApi.load(accessToken, eventId);
+        survey = loaded.event;
+    } catch (error) {
         console.error(error);
-        showError("ارتباط با سرور ابری برقرار نشد. اتصال اینترنت را بررسی کنید.");
+        showError("پرسشنامه هنوز روی این گوشی ذخیره نشده و ارتباط اینترنتی برقرار نیست.");
         return;
     }
-
-    const survey = Array.isArray(data) ? data[0] : data;
 
     if (!survey) {
-        showError("این لینک معتبر نیست یا ساکن غیرفعال شده است.");
+        showError("این لینک معتبر نیست یا پرسشنامه منقضی شده است.");
         return;
     }
 
-    document.getElementById("event-time").textContent =
-        formatDateTime(survey.window_opened_at);
-    document.getElementById("occupant-code").textContent =
-        `کد ناشناس شما: ${survey.occupant_code}`;
-
-    if (survey.survey_status === "PENDING") {
-        showView("claim");
-        return;
+    loadedSurvey = survey;
+    const scheduledTime = document.getElementById("event-time");
+    if (scheduledTime) {
+        scheduledTime.textContent =
+            formatDateTime(
+                survey.scheduled_for ||
+                survey.window_opened_at ||
+                survey.created_at
+            );
     }
 
-    if (
-        survey.survey_status === "CLAIMED" &&
-        survey.already_claimed_by_this_occupant
-    ) {
-        showView("survey");
-        updateWizard();
-        return;
+    const occupantCode = document.getElementById("occupant-code");
+    if (occupantCode) {
+        occupantCode.textContent =
+            `کد ناشناس شما: ${survey.occupant_code || '---'}`;
     }
 
-    if (
-        survey.survey_status === "COMPLETED" &&
-        survey.already_claimed_by_this_occupant
-    ) {
+    const badge = document.getElementById("survey-slot-badge");
+    if (badge) {
+        badge.textContent = slotLabel(survey.survey_slot);
+        badge.classList.remove("hidden");
+    }
+
+    if ((survey.status === "COMPLETED" || survey.status === "COMPLETED")) {
         showView("success");
         return;
     }
 
-    showView("closed");
-}
-
-async function claimSurvey() {
-    const button = document.getElementById("claim-button");
-    setBusy(button, true);
-
-    const { data, error } = await client.rpc("claim_window_survey", {
-        p_event_id: eventId,
-        p_access_token: accessToken,
-    });
-
-    setBusy(button, false);
-
-    if (error) {
-        console.error(error);
-        showError("ثبت پذیرش پرسشنامه انجام نشد.");
-        return;
-    }
-
-    const result = Array.isArray(data) ? data[0] : data;
-
-    if (result?.success) {
-        currentStepIndex = 0;
-        showView("survey");
-        updateWizard();
-    } else {
+    if (["EXPIRED", "UNANSWERED", "CLOSED"].includes(survey.status)) {
         showView("closed");
-    }
-}
-
-async function recordNonClaim(responseType, button) {
-    setBusy(button, true);
-
-    const { error } = await client.rpc("decline_window_survey", {
-        p_event_id: eventId,
-        p_access_token: accessToken,
-        p_response_type: responseType,
-    });
-
-    setBusy(button, false);
-
-    if (error) {
-        console.error(error);
-        showError("ثبت پاسخ انجام نشد.");
         return;
     }
 
-    showView("success");
+    showView("intro");
 }
-
 
 function getTehranTimestamp() {
     const now = new Date();
@@ -282,79 +352,101 @@ function getTehranTimestamp() {
 
 function numericValue(formData, key) {
     const value = formData.get(key);
-    return value === null ? null : Number(value);
+    return value === null || value === "" ? null : Number(value);
 }
 
 async function submitSurvey(event) {
     event.preventDefault();
-
     if (!validateCurrentStep()) return;
 
-    const form = event.currentTarget;
-    const formData = new FormData(form);
-
+    const formData = new FormData(event.currentTarget);
+    const hvacMode = formData.get("hvac_mode");
     const answers = {
-        questionnaire_version: "EMA_WINDOW_OPEN_V2_3",
+        questionnaire_version:
+            loadedSurvey?.questionnaire_version || "EMA_WINDOW_OPEN_V2_3",
+
         opening_reason: formData.get("opening_reason"),
         opening_reason_other: formData.get("opening_reason") === "other"
             ? String(formData.get("opening_reason_other") || "").trim()
             : null,
+
         activity: formData.get("activity"),
         activity_other: formData.get("activity") === "other"
             ? String(formData.get("activity_other") || "").trim()
             : null,
+
         thermal_sensation: numericValue(formData, "thermal_sensation"),
         thermal_preference: numericValue(formData, "thermal_preference"),
         air_freshness: numericValue(formData, "air_freshness"),
         air_movement: numericValue(formData, "air_movement"),
-        hvac_mode: formData.get("hvac_mode"),
-        hvac_speed: ["fan", "cooling", "heating"].includes(formData.get("hvac_mode"))
+
+        hvac_mode: hvacMode,
+        hvac_speed: ["fan", "cooling", "heating"].includes(hvacMode)
             ? formData.get("hvac_speed")
             : null,
-        hvac_status: ["fan", "cooling", "heating"].includes(formData.get("hvac_mode"))
-            ? `${formData.get("hvac_mode")}_${formData.get("hvac_speed")}`
-            : formData.get("hvac_mode"),
+
         air_source: formData.get("air_source"),
         overall_comfort: numericValue(formData, "overall_comfort"),
-        client_submitted_at: getTehranTimestamp(),
-        client_submitted_at_utc: new Date().toISOString(),
-        client_timezone: "Asia/Tehran",
+
+        answer_client_submitted_at: getTehranTimestamp(),
+        answer_client_submitted_at_utc: new Date().toISOString(),
+        answer_client_timezone: "Asia/Tehran",
     };
 
     setBusy(submitButton, true);
 
-    const { data, error } = await client.rpc("submit_window_survey", {
-        p_event_id: eventId,
-        p_access_token: accessToken,
-        p_answers: answers,
-    });
-
-    setBusy(submitButton, false);
-
-    if (error) {
-        console.error(error);
-        formError.textContent =
-            "پاسخ ذخیره نشد. اینترنت را بررسی کرده و دوباره تلاش کنید.";
-        return;
-    }
-
-    const result = Array.isArray(data) ? data[0] : data;
-
-    if (result?.success) {
+    try {
+        const submitted = await window.CloudSurveyApi.submit(accessToken, eventId, answers);
+        setBusy(submitButton, false);
+        if (submitted.queued) {
+            document.querySelector("#success-view p").textContent =
+                "پاسخ روی گوشی ذخیره شد و به‌محض اتصال اینترنت خودکار ارسال می‌شود.";
+        }
         showView("success");
-    } else {
-        formError.textContent = result?.message || "امکان ثبت پاسخ وجود ندارد.";
+    } catch (error) {
+        console.error(error);
+        setBusy(submitButton, false);
+        formError.textContent =
+            error?.data?.message || "این پرسشنامه بسته یا منقضی شده است.";
     }
 }
 
-previousButton.addEventListener("click", () => {
+function safeAddEventListener(element, event, callback) {
+    if (element) {
+        element.addEventListener(event, callback);
+    }
+}
+
+const startButton = document.getElementById("start-button");
+const claimButton = document.getElementById("claim-button");
+const declineButton = document.getElementById("decline-button");
+const unsureButton = document.getElementById("unsure-button");
+
+function startQuestionnaire() {
+    currentStepIndex = 0;
+    showView("survey");
+    updateWizard();
+}
+
+safeAddEventListener(startButton, "click", startQuestionnaire);
+safeAddEventListener(claimButton, "click", startQuestionnaire);
+
+safeAddEventListener(declineButton, "click", () => {
+    showView("success");
+});
+
+safeAddEventListener(unsureButton, "click", () => {
+    showView("success");
+});
+
+safeAddEventListener(previousButton, "click", () => {
     if (currentStepIndex > 0) {
         currentStepIndex -= 1;
         updateWizard();
     }
 });
 
-nextButton.addEventListener("click", () => {
+safeAddEventListener(nextButton, "click", () => {
     if (!validateCurrentStep()) return;
     if (currentStepIndex < steps.length - 1) {
         currentStepIndex += 1;
@@ -362,21 +454,9 @@ nextButton.addEventListener("click", () => {
     }
 });
 
-document.getElementById("claim-button")
-    .addEventListener("click", claimSurvey);
+const surveyForm = document.getElementById("survey-form");
 
-document.getElementById("decline-button")
-    .addEventListener("click", (event) =>
-        recordNonClaim("DECLINED", event.currentTarget)
-    );
-
-document.getElementById("unsure-button")
-    .addEventListener("click", (event) =>
-        recordNonClaim("UNSURE", event.currentTarget)
-    );
-
-document.getElementById("survey-form")
-    .addEventListener("submit", submitSurvey);
+safeAddEventListener(surveyForm, "submit", submitSurvey);
 
 initializeOtherFields();
 initializeHvacFields();
