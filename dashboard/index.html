@@ -205,6 +205,19 @@
                 <article class="chart-card full-width"><h3>Open / Closed History</h3><div class="chart-container"><canvas id="window-state-chart"></canvas></div></article>
             </section>
 
+            <section class="toolbar section-divider">
+                <div>
+                    <h2>Active Surveys</h2>
+                    <p id="survey-summary">Loading pending EMA and Daily surveys…</p>
+                </div>
+            </section>
+
+            <section id="survey-list" class="survey-list" aria-live="polite">
+                <article class="survey-empty-card">
+                    <p>Loading surveys…</p>
+                </article>
+            </section>
+
             <section class="system-information">
                 <span>Cloud refresh: <strong>30 seconds</strong></span>
                 <span>Last refreshed: <strong id="last-refresh">--</strong></span>

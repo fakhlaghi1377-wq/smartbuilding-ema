@@ -7,7 +7,9 @@ const requiredConfig = [
     "ENVIRONMENT_TABLE",
     "ENERGY_TABLE",
     "WINDOW_TABLE",
-    "WINDOW_IMAGE_BUCKET"
+    "WINDOW_IMAGE_BUCKET",
+    "SURVEY_EVENT_TABLE",
+    "SURVEY_SITE_URL"
 ];
 for (const key of requiredConfig) {
     if (!CONFIG || !CONFIG[key]) {
@@ -550,6 +552,102 @@ function updateWindowChart(rows, historyHours) {
     );
 }
 
+const SURVEY_COLUMNS = [
+    "id",
+    "survey_type",
+    "survey_slot",
+    "status",
+    "scheduled_for",
+    "created_at",
+    "expires_at",
+    "access_token"
+].join(",");
+
+async function fetchActiveSurveys() {
+    const now = new Date().toISOString();
+    const { data, error } = await client
+        .from(CONFIG.SURVEY_EVENT_TABLE)
+        .select(SURVEY_COLUMNS)
+        .in("status", ["PENDING", "CLAIMED"])
+        .or(`expires_at.is.null,expires_at.gt.${now}`)
+        .order("scheduled_for", { ascending: true, nullsFirst: false })
+        .limit(100);
+    if (error) throw error;
+    return data || [];
+}
+
+function surveyTypeLabel(row) {
+    return row.survey_type === "WINDOW_OPEN" ? "EMA Window Survey" : "Daily Survey";
+}
+
+function surveySlotLabel(slot) {
+    const labels = {
+        morning: "Morning · 09:00",
+        afternoon: "Afternoon · 14:00",
+        evening: "Evening · 20:00"
+    };
+    return labels[slot] || "";
+}
+
+function surveyUrl(row) {
+    const baseUrl = CONFIG.SURVEY_SITE_URL.replace(/\/+$/, "");
+    const pageUrl = row.survey_type === "WINDOW_OPEN"
+        ? `${baseUrl}/`
+        : `${baseUrl}/daily.html`;
+    const query = new URLSearchParams({
+        event: row.id,
+        token: row.access_token
+    });
+    return `${pageUrl}?${query.toString()}`;
+}
+
+function updateActiveSurveys(rows) {
+    const container = byId("survey-list");
+    if (!container) return;
+    container.replaceChildren();
+
+    if (!rows.length) {
+        const empty = document.createElement("article");
+        empty.className = "survey-empty-card";
+        const message = document.createElement("p");
+        message.textContent = "No pending surveys are available.";
+        empty.append(message);
+        container.append(empty);
+        setText("survey-summary", "All surveys are completed or no survey is currently due.");
+        return;
+    }
+
+    for (const row of rows) {
+        const card = document.createElement("article");
+        card.className = "survey-card";
+
+        const badge = document.createElement("span");
+        badge.className = "survey-badge";
+        badge.textContent = row.survey_type === "WINDOW_OPEN" ? "EMA" : "DAILY";
+
+        const title = document.createElement("h3");
+        title.textContent = surveyTypeLabel(row);
+
+        const time = document.createElement("p");
+        time.textContent = `Scheduled: ${formatDateTime(row.scheduled_for || row.created_at)}`;
+
+        const slot = document.createElement("p");
+        slot.textContent = surveySlotLabel(row.survey_slot);
+        slot.classList.toggle("hidden", !slot.textContent);
+
+        const link = document.createElement("a");
+        link.className = "survey-link";
+        link.href = surveyUrl(row);
+        link.target = "_blank";
+        link.rel = "noopener";
+        link.textContent = "Open survey";
+
+        card.append(badge, title, time, slot, link);
+        container.append(card);
+    }
+    setText("survey-summary", `${rows.length} pending survey${rows.length === 1 ? "" : "s"}`);
+}
+
 async function refreshDashboard() {
     if (!session || refreshInProgress) return;
     refreshInProgress = true;
@@ -562,14 +660,16 @@ async function refreshDashboard() {
             latestEnergy,
             energyHistory,
             windowSummary,
-            windowHistory
+            windowHistory,
+            activeSurveys
         ] = await Promise.all([
             fetchLatestReading(),
             fetchHistory(hours),
             fetchLatestEnergy(),
             fetchEnergyHistory(hours),
             fetchWindowSummary(),
-            fetchWindowHistory(hours)
+            fetchWindowHistory(hours),
+            fetchActiveSurveys()
         ]);
         updateLatest(latest);
         updateCharts(history, hours);
@@ -577,6 +677,7 @@ async function refreshDashboard() {
         updateEnergyCharts(energyHistory, hours);
         await updateWindowSummary(windowSummary);
         updateWindowChart(windowHistory, hours);
+        updateActiveSurveys(activeSurveys);
         setText("last-refresh", new Date().toLocaleTimeString("en-CA", {
             timeZone: CONFIG.DISPLAY_TIME_ZONE,
             hour: "2-digit",
@@ -640,7 +741,20 @@ function startDashboard() {
                 : undefined
         }, () => refreshDashboard())
         .subscribe();
-    realtimeChannels = [environmentChannel, energyChannel, windowChannel];
+    const surveyChannel = client
+        .channel("survey-dashboard")
+        .on("postgres_changes", {
+            event: "*",
+            schema: "public",
+            table: CONFIG.SURVEY_EVENT_TABLE
+        }, () => refreshDashboard())
+        .subscribe();
+    realtimeChannels = [
+        environmentChannel,
+        energyChannel,
+        windowChannel,
+        surveyChannel
+    ];
 }
 
 function renderSession(newSession) {

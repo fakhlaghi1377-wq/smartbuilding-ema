@@ -191,6 +191,45 @@ button:disabled { cursor: wait; opacity: .65; }
 .window-image-frame p { margin: 0; padding: 24px; text-align: center; }
 .window-cards-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
+.survey-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 17px;
+}
+.survey-card,
+.survey-empty-card {
+    padding: 21px;
+    border: 1px solid var(--border);
+    border-radius: 15px;
+    background: var(--surface);
+    box-shadow: 0 5px 16px rgba(15, 23, 42, .045);
+}
+.survey-card { border-top: 4px solid #7c3aed; }
+.survey-card h3 { margin: 0 0 8px; color: var(--heading); font-size: 17px; }
+.survey-card p,
+.survey-empty-card p { margin: 7px 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.survey-badge {
+    display: inline-block;
+    margin-bottom: 12px;
+    padding: 5px 9px;
+    border-radius: 999px;
+    color: #5b21b6;
+    background: #ede9fe;
+    font-size: 12px;
+    font-weight: 800;
+}
+.survey-link {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 11px 15px;
+    border-radius: 10px;
+    color: #fff;
+    background: #7c3aed;
+    font-weight: 750;
+    text-decoration: none;
+}
+.survey-link:hover { background: #6d28d9; }
+
 .system-information {
     display: flex;
     flex-wrap: wrap;
