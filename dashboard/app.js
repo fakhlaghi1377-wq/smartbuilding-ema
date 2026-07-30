@@ -1,7 +1,12 @@
 "use strict";
 
 const CONFIG = window.SMART_BUILDING_CONFIG;
-const requiredConfig = ["SUPABASE_URL", "SUPABASE_PUBLISHABLE_KEY", "ENVIRONMENT_TABLE"];
+const requiredConfig = [
+    "SUPABASE_URL",
+    "SUPABASE_PUBLISHABLE_KEY",
+    "ENVIRONMENT_TABLE",
+    "ENERGY_TABLE"
+];
 for (const key of requiredConfig) {
     if (!CONFIG || !CONFIG[key]) {
         throw new Error(`Missing ${key} in supabase-config.js`);
@@ -20,7 +25,7 @@ const client = window.supabase.createClient(
     }
 );
 
-const SELECT_COLUMNS = [
+const ENVIRONMENT_COLUMNS = [
     "device_id",
     "record_id",
     "recorded_at",
@@ -33,10 +38,25 @@ const SELECT_COLUMNS = [
     "motion_detected"
 ].join(",");
 
+const ENERGY_COLUMNS = [
+    "device_id",
+    "record_id",
+    "recorded_at",
+    "device_uptime_ms",
+    "window_duration_ms",
+    "sample_count",
+    "current_a",
+    "apparent_power_va",
+    "real_power_w",
+    "interval_energy_wh",
+    "total_energy_wh",
+    "total_energy_kwh"
+].join(",");
+
 let session = null;
 let refreshTimer = null;
 let refreshInProgress = false;
-let realtimeChannel = null;
+let realtimeChannels = [];
 let charts = {};
 
 const byId = (id) => document.getElementById(id);
@@ -143,11 +163,13 @@ function updateLatest(reading) {
 async function fetchLatestReading() {
     const query = client
         .from(CONFIG.ENVIRONMENT_TABLE)
-        .select(SELECT_COLUMNS)
+        .select(ENVIRONMENT_COLUMNS)
         .order("recorded_at", { ascending: false })
         .limit(1);
 
-    if (CONFIG.DEVICE_ID) query.eq("device_id", CONFIG.DEVICE_ID);
+    if (CONFIG.ENVIRONMENT_DEVICE_ID) {
+        query.eq("device_id", CONFIG.ENVIRONMENT_DEVICE_ID);
+    }
     const { data, error } = await query;
     if (error) throw error;
     return data?.[0] || null;
@@ -162,12 +184,14 @@ async function fetchHistory(hours) {
     for (let from = 0; from < maxRows; from += pageSize) {
         let query = client
             .from(CONFIG.ENVIRONMENT_TABLE)
-            .select(SELECT_COLUMNS)
+            .select(ENVIRONMENT_COLUMNS)
             .gte("recorded_at", since)
             .order("recorded_at", { ascending: true })
             .range(from, from + pageSize - 1);
 
-        if (CONFIG.DEVICE_ID) query = query.eq("device_id", CONFIG.DEVICE_ID);
+        if (CONFIG.ENVIRONMENT_DEVICE_ID) {
+            query = query.eq("device_id", CONFIG.ENVIRONMENT_DEVICE_ID);
+        }
         const { data, error } = await query;
         if (error) throw error;
         rows.push(...(data || []));
@@ -176,9 +200,75 @@ async function fetchHistory(hours) {
     return rows;
 }
 
+async function fetchLatestEnergy() {
+    let query = client
+        .from(CONFIG.ENERGY_TABLE)
+        .select(ENERGY_COLUMNS)
+        .order("recorded_at", { ascending: false })
+        .limit(1);
+
+    if (CONFIG.ENERGY_DEVICE_ID) {
+        query = query.eq("device_id", CONFIG.ENERGY_DEVICE_ID);
+    }
+    const { data, error } = await query;
+    if (error) throw error;
+    return data?.[0] || null;
+}
+
+async function fetchEnergyHistory(hours) {
+    const since = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
+    const pageSize = Math.min(Math.max(Number(CONFIG.PAGE_SIZE) || 1000, 1), 1000);
+    const maxRows = Math.max(Number(CONFIG.MAX_HISTORY_ROWS) || 10000, pageSize);
+    const rows = [];
+
+    for (let from = 0; from < maxRows; from += pageSize) {
+        let query = client
+            .from(CONFIG.ENERGY_TABLE)
+            .select(ENERGY_COLUMNS)
+            .gte("recorded_at", since)
+            .order("recorded_at", { ascending: true })
+            .range(from, from + pageSize - 1);
+
+        if (CONFIG.ENERGY_DEVICE_ID) {
+            query = query.eq("device_id", CONFIG.ENERGY_DEVICE_ID);
+        }
+        const { data, error } = await query;
+        if (error) throw error;
+        rows.push(...(data || []));
+        if (!data || data.length < pageSize) break;
+    }
+    return rows;
+}
+
+function updateLatestEnergy(reading) {
+    if (!reading) {
+        setText("energy-time", "No energy data available");
+        return;
+    }
+    setText("energy-current", formatNumber(reading.current_a, 2));
+    setText("energy-real-power", formatNumber(reading.real_power_w, 1));
+    setText("energy-apparent-power", formatNumber(reading.apparent_power_va, 1));
+    setText("energy-interval", formatNumber(reading.interval_energy_wh, 3));
+    setText("energy-total", formatNumber(reading.total_energy_kwh, 3));
+    setText("energy-device", reading.device_id || "--");
+    setText(
+        "energy-record-details",
+        `Samples: ${reading.sample_count ?? "--"} · Record: ${reading.record_id || "--"}`
+    );
+    setText("energy-time", `Latest measurement: ${formatDateTime(reading.recorded_at)}`);
+}
+
 function average(items, field) {
     const values = items.map((item) => Number(item[field])).filter(Number.isFinite);
     return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
+}
+
+function lastFinite(items, field) {
+    for (let index = items.length - 1; index >= 0; index -= 1) {
+        const value = Number(items[index][field]);
+        if (Number.isFinite(value)) return value;
+    }
+    return null;
 }
 
 function aggregateHistory(rows, historyHours) {
@@ -206,6 +296,30 @@ function aggregateHistory(rows, historyHours) {
         scd40_humidity_rh: average(items, "scd40_humidity_rh"),
         illuminance_lux: average(items, "illuminance_lux"),
         motion_detected: items.some((item) => item.motion_detected === true)
+    }));
+}
+
+function aggregateEnergyHistory(rows, historyHours) {
+    const targetPoints = 288;
+    const bucketMs = Math.max(
+        60 * 1000,
+        Math.ceil((historyHours * 60 * 60 * 1000) / targetPoints / 60000) * 60000
+    );
+    const buckets = new Map();
+
+    for (const row of rows) {
+        const timestamp = new Date(row.recorded_at).getTime();
+        if (!Number.isFinite(timestamp)) continue;
+        const key = Math.floor(timestamp / bucketMs) * bucketMs;
+        if (!buckets.has(key)) buckets.set(key, []);
+        buckets.get(key).push(row);
+    }
+
+    return [...buckets.entries()].sort((a, b) => a[0] - b[0]).map(([time, items]) => ({
+        recorded_at: new Date(time).toISOString(),
+        current_a: average(items, "current_a"),
+        real_power_w: average(items, "real_power_w"),
+        total_energy_kwh: lastFinite(items, "total_energy_kwh")
     }));
 }
 
@@ -281,18 +395,50 @@ function updateCharts(rawRows, historyHours) {
     );
 }
 
+function updateEnergyCharts(rawRows, historyHours) {
+    const rows = aggregateEnergyHistory(rawRows, historyHours);
+    const labels = rows.map((row) => formatChartTime(row.recorded_at, historyHours));
+    const dataset = (label, field, color) => ({
+        label,
+        data: rows.map((row) => row[field]),
+        borderColor: color,
+        backgroundColor: `${color}22`,
+        spanGaps: true
+    });
+
+    lineChart("current", "current-chart", labels, [
+        dataset("Current", "current_a", "#0891b2")
+    ], "A");
+    lineChart("power", "power-chart", labels, [
+        dataset("Real Power", "real_power_w", "#f97316")
+    ], "W");
+    lineChart("energyTotal", "energy-total-chart", labels, [
+        dataset("Total Energy", "total_energy_kwh", "#16a34a")
+    ], "kWh");
+
+    const capped = rawRows.length >= Number(CONFIG.MAX_HISTORY_ROWS);
+    setText(
+        "energy-history-summary",
+        `${rawRows.length.toLocaleString()} measurements · ${rows.length.toLocaleString()} chart intervals${capped ? " · maximum row limit reached" : ""}`
+    );
+}
+
 async function refreshDashboard() {
     if (!session || refreshInProgress) return;
     refreshInProgress = true;
     try {
         updateConnectionStatus(true, "Updating…");
         const hours = Number(byId("history-hours")?.value || 24);
-        const [latest, history] = await Promise.all([
+        const [latest, history, latestEnergy, energyHistory] = await Promise.all([
             fetchLatestReading(),
-            fetchHistory(hours)
+            fetchHistory(hours),
+            fetchLatestEnergy(),
+            fetchEnergyHistory(hours)
         ]);
         updateLatest(latest);
         updateCharts(history, hours);
+        updateLatestEnergy(latestEnergy);
+        updateEnergyCharts(energyHistory, hours);
         setText("last-refresh", new Date().toLocaleTimeString("en-CA", {
             timeZone: CONFIG.DISPLAY_TIME_ZONE,
             hour: "2-digit",
@@ -315,23 +461,37 @@ async function refreshDashboard() {
 function stopDashboard() {
     if (refreshTimer) clearInterval(refreshTimer);
     refreshTimer = null;
-    if (realtimeChannel) client.removeChannel(realtimeChannel);
-    realtimeChannel = null;
+    for (const channel of realtimeChannels) client.removeChannel(channel);
+    realtimeChannels = [];
 }
 
 function startDashboard() {
     stopDashboard();
     refreshDashboard();
     refreshTimer = setInterval(refreshDashboard, Number(CONFIG.REFRESH_INTERVAL_MS) || 30000);
-    realtimeChannel = client
+    const environmentChannel = client
         .channel("environment-dashboard")
         .on("postgres_changes", {
             event: "INSERT",
             schema: "public",
             table: CONFIG.ENVIRONMENT_TABLE,
-            filter: CONFIG.DEVICE_ID ? `device_id=eq.${CONFIG.DEVICE_ID}` : undefined
+            filter: CONFIG.ENVIRONMENT_DEVICE_ID
+                ? `device_id=eq.${CONFIG.ENVIRONMENT_DEVICE_ID}`
+                : undefined
         }, () => refreshDashboard())
         .subscribe();
+    const energyChannel = client
+        .channel("energy-dashboard")
+        .on("postgres_changes", {
+            event: "INSERT",
+            schema: "public",
+            table: CONFIG.ENERGY_TABLE,
+            filter: CONFIG.ENERGY_DEVICE_ID
+                ? `device_id=eq.${CONFIG.ENERGY_DEVICE_ID}`
+                : undefined
+        }, () => refreshDashboard())
+        .subscribe();
+    realtimeChannels = [environmentChannel, energyChannel];
 }
 
 function renderSession(newSession) {

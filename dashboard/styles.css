@@ -128,6 +128,12 @@ button:disabled { cursor: wait; opacity: .65; }
 }
 
 .data-card { border-top: 4px solid var(--primary); }
+.data-card.energy-card { border-top-color: #f97316; }
+.section-divider {
+    margin-top: 46px;
+    padding-top: 28px;
+    border-top: 1px solid var(--border);
+}
 .data-card h3, .chart-card h3 { margin: 0 0 18px; color: #475569; font-size: 15px; }
 .value-row { display: flex; align-items: baseline; gap: 7px; }
 .main-value { color: var(--heading); font-size: 37px; font-weight: 750; }
