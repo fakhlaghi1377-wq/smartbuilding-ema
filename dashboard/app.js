@@ -5,7 +5,9 @@ const requiredConfig = [
     "SUPABASE_URL",
     "SUPABASE_PUBLISHABLE_KEY",
     "ENVIRONMENT_TABLE",
-    "ENERGY_TABLE"
+    "ENERGY_TABLE",
+    "WINDOW_TABLE",
+    "WINDOW_IMAGE_BUCKET"
 ];
 for (const key of requiredConfig) {
     if (!CONFIG || !CONFIG[key]) {
@@ -45,6 +47,18 @@ const ENERGY_COLUMNS = [
     "real_power_w",
     "interval_energy_wh",
     "total_energy_kwh"
+].join(",");
+
+const WINDOW_COLUMNS = [
+    "id",
+    "recorded_at",
+    "record_id",
+    "window_state",
+    "is_transition",
+    "image_path",
+    "vision_window_state",
+    "vision_confidence",
+    "open_duration_seconds"
 ].join(",");
 
 let session = null;
@@ -247,6 +261,117 @@ function updateLatestEnergy(reading) {
     setText("energy-time", `Latest measurement: ${formatDateTime(reading.recorded_at)}`);
 }
 
+async function fetchWindowSummary() {
+    let latestQuery = client
+        .from(CONFIG.WINDOW_TABLE)
+        .select(WINDOW_COLUMNS)
+        .eq("is_transition", true)
+        .order("recorded_at", { ascending: false })
+        .limit(1);
+    let imageQuery = client
+        .from(CONFIG.WINDOW_TABLE)
+        .select(WINDOW_COLUMNS)
+        .not("image_path", "is", null)
+        .order("recorded_at", { ascending: false })
+        .limit(1);
+    let durationQuery = client
+        .from(CONFIG.WINDOW_TABLE)
+        .select("recorded_at,open_duration_seconds")
+        .eq("window_state", "CLOSED")
+        .not("open_duration_seconds", "is", null)
+        .order("recorded_at", { ascending: false })
+        .limit(1);
+
+    if (CONFIG.WINDOW_DEVICE_ID) {
+        latestQuery = latestQuery.eq("device_id", CONFIG.WINDOW_DEVICE_ID);
+        imageQuery = imageQuery.eq("device_id", CONFIG.WINDOW_DEVICE_ID);
+        durationQuery = durationQuery.eq("device_id", CONFIG.WINDOW_DEVICE_ID);
+    }
+
+    const [latestResult, imageResult, durationResult] = await Promise.all([
+        latestQuery,
+        imageQuery,
+        durationQuery
+    ]);
+    if (latestResult.error) throw latestResult.error;
+    if (imageResult.error) throw imageResult.error;
+    if (durationResult.error) throw durationResult.error;
+    return {
+        latest: latestResult.data?.[0] || null,
+        latestImage: imageResult.data?.[0] || null,
+        latestDuration: durationResult.data?.[0] || null
+    };
+}
+
+async function fetchWindowHistory(hours) {
+    const since = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
+    let query = client
+        .from(CONFIG.WINDOW_TABLE)
+        .select("recorded_at,window_state,is_transition")
+        .eq("is_transition", true)
+        .gte("recorded_at", since)
+        .order("recorded_at", { ascending: true })
+        .limit(5000);
+    if (CONFIG.WINDOW_DEVICE_ID) {
+        query = query.eq("device_id", CONFIG.WINDOW_DEVICE_ID);
+    }
+    const { data, error } = await query;
+    if (error) throw error;
+    return data || [];
+}
+
+async function updateWindowSummary(summary) {
+    const latest = summary?.latest;
+    const badge = byId("window-state-badge");
+    if (!latest) {
+        setText("window-time", "No window data available");
+        if (badge) {
+            badge.textContent = "Unknown";
+            badge.className = "large-badge neutral";
+        }
+    } else {
+        const isOpen = latest.window_state === "OPEN";
+        setText("window-time", `Latest event: ${formatDateTime(latest.recorded_at)}`);
+        if (badge) {
+            badge.textContent = isOpen ? "OPEN" : "CLOSED";
+            badge.className = `large-badge ${isOpen ? "success" : "neutral"}`;
+        }
+    }
+
+    const duration = Number(summary?.latestDuration?.open_duration_seconds);
+    setText(
+        "window-duration",
+        Number.isFinite(duration) ? (duration / 60).toFixed(1) : "--"
+    );
+
+    const imageRow = summary?.latestImage;
+    const image = byId("window-image");
+    const placeholder = byId("window-image-placeholder");
+    if (!imageRow?.image_path) {
+        if (image) {
+            image.removeAttribute("src");
+            image.classList.add("hidden");
+        }
+        if (placeholder) placeholder.classList.remove("hidden");
+        setText("window-image-time", "No cloud image available");
+        return;
+    }
+
+    const { data, error } = await client.storage
+        .from(CONFIG.WINDOW_IMAGE_BUCKET)
+        .createSignedUrl(imageRow.image_path, 3600);
+    if (error) throw error;
+    if (image) {
+        image.src = data.signedUrl;
+        image.classList.remove("hidden");
+    }
+    if (placeholder) placeholder.classList.add("hidden");
+    setText(
+        "window-image-time",
+        `Captured: ${formatDateTime(imageRow.recorded_at)}`
+    );
+}
+
 function average(items, field) {
     const values = items.map((item) => Number(item[field])).filter(Number.isFinite);
     return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
@@ -408,22 +533,50 @@ function updateEnergyCharts(rawRows, historyHours) {
     );
 }
 
+function updateWindowChart(rows, historyHours) {
+    const labels = rows.map((row) =>
+        formatChartTime(row.recorded_at, historyHours)
+    );
+    lineChart("windowState", "window-state-chart", labels, [{
+        label: "Window",
+        data: rows.map((row) => row.window_state === "OPEN" ? 1 : 0),
+        borderColor: "#0891b2",
+        backgroundColor: "#0891b222",
+        spanGaps: true
+    }], "0 = Closed · 1 = Open", true);
+    setText(
+        "window-history-summary",
+        `${rows.length.toLocaleString()} transition events`
+    );
+}
+
 async function refreshDashboard() {
     if (!session || refreshInProgress) return;
     refreshInProgress = true;
     try {
         updateConnectionStatus(true, "Updating…");
         const hours = Number(byId("history-hours")?.value || 24);
-        const [latest, history, latestEnergy, energyHistory] = await Promise.all([
+        const [
+            latest,
+            history,
+            latestEnergy,
+            energyHistory,
+            windowSummary,
+            windowHistory
+        ] = await Promise.all([
             fetchLatestReading(),
             fetchHistory(hours),
             fetchLatestEnergy(),
-            fetchEnergyHistory(hours)
+            fetchEnergyHistory(hours),
+            fetchWindowSummary(),
+            fetchWindowHistory(hours)
         ]);
         updateLatest(latest);
         updateCharts(history, hours);
         updateLatestEnergy(latestEnergy);
         updateEnergyCharts(energyHistory, hours);
+        await updateWindowSummary(windowSummary);
+        updateWindowChart(windowHistory, hours);
         setText("last-refresh", new Date().toLocaleTimeString("en-CA", {
             timeZone: CONFIG.DISPLAY_TIME_ZONE,
             hour: "2-digit",
@@ -476,7 +629,18 @@ function startDashboard() {
                 : undefined
         }, () => refreshDashboard())
         .subscribe();
-    realtimeChannels = [environmentChannel, energyChannel];
+    const windowChannel = client
+        .channel("window-dashboard")
+        .on("postgres_changes", {
+            event: "INSERT",
+            schema: "public",
+            table: CONFIG.WINDOW_TABLE,
+            filter: CONFIG.WINDOW_DEVICE_ID
+                ? `device_id=eq.${CONFIG.WINDOW_DEVICE_ID}`
+                : undefined
+        }, () => refreshDashboard())
+        .subscribe();
+    realtimeChannels = [environmentChannel, energyChannel, windowChannel];
 }
 
 function renderSession(newSession) {

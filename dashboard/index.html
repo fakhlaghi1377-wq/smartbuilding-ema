@@ -12,7 +12,7 @@
         <form id="login-form" class="login-card">
             <div class="brand-mark">SB</div>
             <h1>Smart Building Dashboard</h1>
-            <p>Sign in to view private environmental and energy measurements.</p>
+            <p>Sign in to view private environmental, energy, and window data.</p>
 
             <label for="email">Email</label>
             <input id="email" name="email" type="email" autocomplete="username" required>
@@ -29,7 +29,7 @@
         <header class="main-header">
             <div>
                 <h1>Smart Building Dashboard</h1>
-                <p>Private cloud monitoring for environmental and energy nodes</p>
+                <p>Private cloud monitoring for environmental, energy, and window nodes</p>
             </div>
             <div class="header-actions">
                 <div class="connection-box">
@@ -161,6 +161,48 @@
             <section class="charts-grid">
                 <article class="chart-card"><h3>Real Power History</h3><div class="chart-container"><canvas id="power-chart"></canvas></div></article>
                 <article class="chart-card"><h3>Cumulative Energy History</h3><div class="chart-container"><canvas id="energy-total-chart"></canvas></div></article>
+            </section>
+
+            <section class="toolbar section-divider">
+                <div>
+                    <h2>Window Monitoring</h2>
+                    <p id="window-time">Waiting for data…</p>
+                </div>
+            </section>
+
+            <section class="window-layout">
+                <article class="window-image-card">
+                    <h3>Latest Window Image</h3>
+                    <div class="window-image-frame">
+                        <img id="window-image" class="hidden" alt="Latest window capture">
+                        <p id="window-image-placeholder">No cloud image available</p>
+                    </div>
+                    <p id="window-image-time" class="sensor-label">Waiting for an image…</p>
+                </article>
+
+                <section class="cards-grid window-cards-grid">
+                    <article class="data-card window-card">
+                        <h3>Window State</h3>
+                        <div id="window-state-badge" class="large-badge neutral">Unknown</div>
+                        <p class="sensor-label">Magnetic reed-switch state</p>
+                    </article>
+                    <article class="data-card window-card">
+                        <h3>Last Open Duration</h3>
+                        <div class="value-row"><span id="window-duration" class="main-value">--</span><span class="unit">min</span></div>
+                        <p class="sensor-label">Most recently completed open session</p>
+                    </article>
+                </section>
+            </section>
+
+            <section class="charts-heading">
+                <div>
+                    <h2>Window History</h2>
+                    <p id="window-history-summary">Loading history…</p>
+                </div>
+            </section>
+
+            <section class="charts-grid">
+                <article class="chart-card full-width"><h3>Open / Closed History</h3><div class="chart-container"><canvas id="window-state-chart"></canvas></div></article>
             </section>
 
             <section class="system-information">
