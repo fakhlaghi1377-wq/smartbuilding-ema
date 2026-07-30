@@ -81,6 +81,27 @@ function setHidden(id, hidden) {
     if (element) element.classList.toggle("hidden", hidden);
 }
 
+function updateWindowDurationLabels(isOpen) {
+    const titleText = isOpen
+        ? "Current Open Duration"
+        : "Last Open Duration";
+    const descriptionText = isOpen
+        ? "Current open session"
+        : "Most recently completed open session";
+
+    const title = byId("window-duration-title")
+        || [...document.querySelectorAll("h1,h2,h3,h4,h5,h6,.metric-label,.stat-label")]
+            .find((element) => /^(current |last )?open duration$/i.test(
+                element.textContent.trim()
+            ));
+    const description = byId("window-duration-description")
+        || [...document.querySelectorAll("p,small,.metric-description,.stat-description")]
+            .find((element) => /open session/i.test(element.textContent));
+
+    if (title) title.textContent = titleText;
+    if (description) description.textContent = descriptionText;
+}
+
 function formatNumber(value, digits = 1) {
     const number = Number(value);
     return Number.isFinite(number) ? number.toFixed(digits) : "--";
@@ -280,6 +301,7 @@ async function fetchWindowSummary() {
         .from(CONFIG.WINDOW_TABLE)
         .select("recorded_at,open_duration_seconds")
         .eq("window_state", "CLOSED")
+        .eq("is_transition", true)
         .not("open_duration_seconds", "is", null)
         .order("recorded_at", { ascending: false })
         .limit(1);
@@ -325,6 +347,7 @@ async function fetchWindowHistory(hours) {
 async function updateWindowSummary(summary) {
     const latest = summary?.latest;
     const badge = byId("window-state-badge");
+    const isOpen = latest?.window_state === "OPEN";
     if (!latest) {
         setText("window-time", "No window data available");
         if (badge) {
@@ -332,7 +355,6 @@ async function updateWindowSummary(summary) {
             badge.className = "large-badge neutral";
         }
     } else {
-        const isOpen = latest.window_state === "OPEN";
         setText("window-time", `Latest event: ${formatDateTime(latest.recorded_at)}`);
         if (badge) {
             badge.textContent = isOpen ? "OPEN" : "CLOSED";
@@ -340,11 +362,26 @@ async function updateWindowSummary(summary) {
         }
     }
 
-    const duration = Number(summary?.latestDuration?.open_duration_seconds);
+    let duration = null;
+    if (isOpen) {
+        const openedAt = new Date(latest.recorded_at).getTime();
+        if (Number.isFinite(openedAt)) {
+            duration = Math.max(0, (Date.now() - openedAt) / 1000);
+        }
+    } else {
+        const lastCompletedDuration = Number(
+            summary?.latestDuration?.open_duration_seconds
+        );
+        if (Number.isFinite(lastCompletedDuration)) {
+            duration = lastCompletedDuration;
+        }
+    }
+
     setText(
         "window-duration",
         Number.isFinite(duration) ? (duration / 60).toFixed(1) : "--"
     );
+    updateWindowDurationLabels(isOpen);
 
     const imageRow = summary?.latestImage;
     const image = byId("window-image");
