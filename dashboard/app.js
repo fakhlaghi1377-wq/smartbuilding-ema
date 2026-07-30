@@ -39,17 +39,11 @@ const ENVIRONMENT_COLUMNS = [
 ].join(",");
 
 const ENERGY_COLUMNS = [
-    "device_id",
-    "record_id",
     "recorded_at",
-    "device_uptime_ms",
-    "window_duration_ms",
-    "sample_count",
     "current_a",
     "apparent_power_va",
     "real_power_w",
     "interval_energy_wh",
-    "total_energy_wh",
     "total_energy_kwh"
 ].join(",");
 
@@ -250,11 +244,6 @@ function updateLatestEnergy(reading) {
     setText("energy-apparent-power", formatNumber(reading.apparent_power_va, 1));
     setText("energy-interval", formatNumber(reading.interval_energy_wh, 3));
     setText("energy-total", formatNumber(reading.total_energy_kwh, 3));
-    setText("energy-device", reading.device_id || "--");
-    setText(
-        "energy-record-details",
-        `Samples: ${reading.sample_count ?? "--"} · Record: ${reading.record_id || "--"}`
-    );
     setText("energy-time", `Latest measurement: ${formatDateTime(reading.recorded_at)}`);
 }
 
@@ -317,7 +306,6 @@ function aggregateEnergyHistory(rows, historyHours) {
 
     return [...buckets.entries()].sort((a, b) => a[0] - b[0]).map(([time, items]) => ({
         recorded_at: new Date(time).toISOString(),
-        current_a: average(items, "current_a"),
         real_power_w: average(items, "real_power_w"),
         total_energy_kwh: lastFinite(items, "total_energy_kwh")
     }));
@@ -406,9 +394,6 @@ function updateEnergyCharts(rawRows, historyHours) {
         spanGaps: true
     });
 
-    lineChart("current", "current-chart", labels, [
-        dataset("Current", "current_a", "#0891b2")
-    ], "A");
     lineChart("power", "power-chart", labels, [
         dataset("Real Power", "real_power_w", "#f97316")
     ], "W");
