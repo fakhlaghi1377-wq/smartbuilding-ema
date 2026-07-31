@@ -8,7 +8,6 @@ window.SMART_BUILDING_CONFIG = Object.freeze({
     SUPABASE_PUBLISHABLE_KEY: "sb_publishable_Mv7kzCdhAytHLGszxBDpeA_zEoexIiC",
     ENVIRONMENT_TABLE: "environment_readings",
     ENVIRONMENT_DEVICE_ID: "ENV_ROOM_01",
-    OUTDOOR_WEATHER_TABLE: "outdoor_weather_backup",
     ENERGY_TABLE: "energy_measurements",
     ENERGY_DEVICE_ID: "ESP32_CT_01",
     WINDOW_TABLE: "window_events",
