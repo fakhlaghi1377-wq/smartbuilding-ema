@@ -5,6 +5,7 @@ const requiredConfig = [
     "SUPABASE_URL",
     "SUPABASE_PUBLISHABLE_KEY",
     "ENVIRONMENT_TABLE",
+    "OUTDOOR_WEATHER_TABLE",
     "ENERGY_TABLE",
     "WINDOW_TABLE",
     "WINDOW_IMAGE_BUCKET",
@@ -42,6 +43,21 @@ const ENVIRONMENT_COLUMNS = [
     "sht31_humidity_rh",
     "illuminance_lux",
     "motion_detected"
+].join(",");
+
+const OUTDOOR_WEATHER_COLUMNS = [
+    "recorded_at",
+    "temperature_c",
+    "humidity_percent",
+    "wind_speed_mps",
+    "wind_direction_deg",
+    "weather_description",
+    "aqi",
+    "pm25_ug_m3",
+    "pm10_ug_m3",
+    "co_ug_m3",
+    "no2_ug_m3",
+    "o3_ug_m3"
 ].join(",");
 
 const ENERGY_COLUMNS = [
@@ -92,7 +108,7 @@ let charts = {};
 
 const byId = (id) => document.getElementById(id);
 
-const DASHBOARD_PAGES = new Set(["environment", "energy", "window", "surveys"]);
+const DASHBOARD_PAGES = new Set(["environment", "outdoor", "energy", "window", "surveys"]);
 
 function showDashboardPage(requestedPage, updateHash = true) {
     const page = DASHBOARD_PAGES.has(requestedPage) ? requestedPage : "environment";
@@ -271,6 +287,87 @@ async function fetchHistory(hours) {
         if (!data || data.length < pageSize) break;
     }
     return rows;
+}
+
+async function fetchLatestOutdoorWeather() {
+    const { data, error } = await client
+        .from(CONFIG.OUTDOOR_WEATHER_TABLE)
+        .select(OUTDOOR_WEATHER_COLUMNS)
+        .order("recorded_at", { ascending: false })
+        .limit(1);
+    if (error) throw error;
+    return data?.[0] || null;
+}
+
+async function fetchOutdoorWeatherHistory(hours) {
+    const since = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
+    const pageSize = Math.min(Math.max(Number(CONFIG.PAGE_SIZE) || 1000, 1), 1000);
+    const maxRows = Math.max(Number(CONFIG.MAX_HISTORY_ROWS) || 10000, pageSize);
+    const rows = [];
+
+    for (let from = 0; from < maxRows; from += pageSize) {
+        const { data, error } = await client
+            .from(CONFIG.OUTDOOR_WEATHER_TABLE)
+            .select(OUTDOOR_WEATHER_COLUMNS)
+            .gte("recorded_at", since)
+            .order("recorded_at", { ascending: true })
+            .range(from, from + pageSize - 1);
+        if (error) throw error;
+        rows.push(...(data || []));
+        if (!data || data.length < pageSize) break;
+    }
+    return rows;
+}
+
+function windDirectionToCardinal(value) {
+    const degrees = Number(value);
+    if (!Number.isFinite(degrees)) return "Direction unavailable";
+    const directions = [
+        "N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
+        "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"
+    ];
+    return directions[Math.round(((degrees % 360) + 360) % 360 / 22.5) % 16];
+}
+
+function updateOutdoorAqiStatus(value) {
+    const element = byId("outdoor-aqi-status");
+    if (!element) return;
+    const labels = {
+        1: ["Good", "success-text"],
+        2: ["Fair", "success-text"],
+        3: ["Moderate", "warning-text"],
+        4: ["Poor", "danger-text"],
+        5: ["Very poor", "danger-text"]
+    };
+    const match = labels[Number(value)];
+    element.textContent = match?.[0] || "No data";
+    element.className = `status-label ${match?.[1] || "neutral-text"}`;
+}
+
+function updateLatestOutdoorWeather(weather) {
+    if (!weather) {
+        setText("outdoor-time", "No outdoor data available");
+        [
+            "outdoor-temperature", "outdoor-humidity", "outdoor-wind-speed",
+            "outdoor-wind-direction", "outdoor-aqi", "outdoor-pm25",
+            "outdoor-pm10"
+        ].forEach((id) => setText(id, "--"));
+        setText("outdoor-wind-cardinal", "Direction unavailable");
+        setText("outdoor-description", "--");
+        updateOutdoorAqiStatus(null);
+        return;
+    }
+    setText("outdoor-temperature", formatNumber(weather.temperature_c, 1));
+    setText("outdoor-humidity", formatNumber(weather.humidity_percent, 0));
+    setText("outdoor-wind-speed", formatNumber(weather.wind_speed_mps, 1));
+    setText("outdoor-wind-direction", formatNumber(weather.wind_direction_deg, 0));
+    setText("outdoor-wind-cardinal", windDirectionToCardinal(weather.wind_direction_deg));
+    setText("outdoor-aqi", formatNumber(weather.aqi, 0));
+    setText("outdoor-pm25", formatNumber(weather.pm25_ug_m3, 1));
+    setText("outdoor-pm10", formatNumber(weather.pm10_ug_m3, 1));
+    setText("outdoor-description", weather.weather_description || "--");
+    setText("outdoor-time", `Latest outdoor measurement: ${formatDateTime(weather.recorded_at)}`);
+    updateOutdoorAqiStatus(weather.aqi);
 }
 
 async function fetchLatestEnergy() {
@@ -772,6 +869,34 @@ function aggregateEnergyHistory(rows, historyHours) {
     }));
 }
 
+function aggregateOutdoorHistory(rows, historyHours) {
+    const targetPoints = 288;
+    const bucketMs = Math.max(
+        60 * 1000,
+        Math.ceil((historyHours * 60 * 60 * 1000) / targetPoints / 60000) * 60000
+    );
+    const buckets = new Map();
+
+    for (const row of rows) {
+        const timestamp = new Date(row.recorded_at).getTime();
+        if (!Number.isFinite(timestamp)) continue;
+        const key = Math.floor(timestamp / bucketMs) * bucketMs;
+        if (!buckets.has(key)) buckets.set(key, []);
+        buckets.get(key).push(row);
+    }
+
+    return [...buckets.entries()].sort((a, b) => a[0] - b[0]).map(([time, items]) => ({
+        recorded_at: new Date(time).toISOString(),
+        temperature_c: average(items, "temperature_c"),
+        humidity_percent: average(items, "humidity_percent"),
+        wind_speed_mps: average(items, "wind_speed_mps"),
+        wind_direction_deg: average(items, "wind_direction_deg"),
+        aqi: average(items, "aqi"),
+        pm25_ug_m3: average(items, "pm25_ug_m3"),
+        pm10_ug_m3: average(items, "pm10_ug_m3")
+    }));
+}
+
 function destroyChart(name) {
     if (charts[name]) {
         charts[name].destroy();
@@ -935,6 +1060,44 @@ function updateWindowChart(rows, historyHours) {
     );
 }
 
+function updateOutdoorCharts(rawRows, historyHours) {
+    const rows = aggregateOutdoorHistory(rawRows, historyHours);
+    const labels = rows.map((row) => formatChartTime(row.recorded_at, historyHours));
+    const dataset = (label, field, color) => ({
+        label,
+        data: rows.map((row) => row[field]),
+        borderColor: color,
+        backgroundColor: `${color}22`,
+        spanGaps: true
+    });
+
+    lineChart("outdoorTemperature", "outdoor-temperature-chart", labels, [
+        dataset("Outdoor Temperature", "temperature_c", "#dc2626")
+    ], "°C");
+    lineChart("outdoorHumidity", "outdoor-humidity-chart", labels, [
+        dataset("Outdoor Humidity", "humidity_percent", "#2563eb")
+    ], "%RH");
+    lineChart("outdoorWindSpeed", "outdoor-wind-speed-chart", labels, [
+        dataset("Wind Speed", "wind_speed_mps", "#0891b2")
+    ], "m/s");
+    lineChart("outdoorWindDirection", "outdoor-wind-direction-chart", labels, [
+        dataset("Wind Direction", "wind_direction_deg", "#7c3aed")
+    ], "Degrees");
+    lineChart("outdoorAqi", "outdoor-aqi-chart", labels, [
+        dataset("AQI", "aqi", "#f97316")
+    ], "AQI (1–5)");
+    lineChart("outdoorPm", "outdoor-pm-chart", labels, [
+        dataset("PM2.5", "pm25_ug_m3", "#db2777"),
+        dataset("PM10", "pm10_ug_m3", "#9333ea")
+    ], "µg/m³");
+
+    const capped = rawRows.length >= Number(CONFIG.MAX_HISTORY_ROWS);
+    setText(
+        "outdoor-history-summary",
+        `${rawRows.length.toLocaleString()} measurements · ${rows.length.toLocaleString()} chart intervals${capped ? " · maximum row limit reached" : ""}`
+    );
+}
+
 async function refreshDashboard() {
     if (!session || refreshInProgress) return;
     refreshInProgress = true;
@@ -944,6 +1107,8 @@ async function refreshDashboard() {
         const [
             latest,
             history,
+            latestOutdoor,
+            outdoorHistory,
             latestEnergy,
             energyHistory,
             windowSummary,
@@ -953,6 +1118,8 @@ async function refreshDashboard() {
         ] = await Promise.all([
             fetchLatestReading(),
             fetchHistory(hours),
+            fetchLatestOutdoorWeather(),
+            fetchOutdoorWeatherHistory(hours),
             fetchLatestEnergy(),
             fetchEnergyHistory(hours),
             fetchWindowSummary(),
@@ -962,6 +1129,8 @@ async function refreshDashboard() {
         ]);
         updateLatest(latest);
         updateCharts(history, hours);
+        updateLatestOutdoorWeather(latestOutdoor);
+        updateOutdoorCharts(outdoorHistory, hours);
         updateLatestEnergy(latestEnergy);
         updateEnergyCharts(energyHistory, hours);
         await updateWindowSummary(windowSummary);

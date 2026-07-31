@@ -153,6 +153,7 @@ button:disabled { cursor: wait; opacity: .65; }
 
 .data-card { border-top: 4px solid var(--primary); }
 .data-card.energy-card { border-top-color: #f97316; }
+.data-card.outdoor-card { border-top-color: #16a34a; }
 .data-card.window-card { border-top-color: #0891b2; }
 .section-divider {
     margin-top: 46px;
@@ -174,6 +175,15 @@ button:disabled { cursor: wait; opacity: .65; }
 .danger-text { color: var(--danger-text); }
 .neutral-text { color: var(--muted); }
 .device-id { color: var(--heading); font-size: 20px; font-weight: 750; overflow-wrap: anywhere; }
+.weather-description {
+    margin-top: .65rem;
+    min-height: 2.6rem;
+    color: var(--heading);
+    font-size: 1.3rem;
+    font-weight: 700;
+    line-height: 1.25;
+    text-transform: capitalize;
+}
 
 .large-badge { display: inline-block; padding: 11px 18px; border-radius: 999px; font-size: 18px; font-weight: 750; }
 .large-badge.success { color: var(--success-text); background: var(--success-bg); }
