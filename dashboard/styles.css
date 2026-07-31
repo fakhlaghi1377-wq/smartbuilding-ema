@@ -240,6 +240,10 @@ button:disabled { cursor: wait; opacity: .65; }
 
 .daily-event-card h3 { margin: 0 0 8px; color: var(--heading); }
 .daily-event-card p { margin: 0; }
+.daily-meta {
+    color: var(--muted);
+    font-weight: 650;
+}
 .daily-empty {
     margin: 0;
     padding: 21px;

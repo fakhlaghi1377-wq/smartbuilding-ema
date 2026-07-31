@@ -430,7 +430,7 @@ function occupantLabel(event) {
 
     const numberMatch = raw.match(/(\d+)\s*$/);
     if (numberMatch) return `User ${Number(numberMatch[1])}`;
-    return raw || "User not specified";
+    return raw;
 }
 
 function updateLatestEma(event) {
@@ -464,8 +464,7 @@ function updateLatestEma(event) {
         || event.scheduled_for
         || event.created_at;
 
-    const user = occupantLabel(event);
-    setText("ema-time", `${user} · Window opened: ${formatDateTime(openedAt)}`);
+    setText("ema-time", `Window opened: ${formatDateTime(openedAt)}`);
     setText(
         "ema-expiry",
         event.expires_at
@@ -483,7 +482,7 @@ function updateLatestEma(event) {
                 token: String(event.access_token)
             });
             link.href = `${CONFIG.EMA_SURVEY_BASE_URL.replace(/\/$/, "")}/?${query}`;
-            link.textContent = `Open EMA questionnaire — ${user}`;
+            link.textContent = "Open EMA questionnaire";
             link.classList.remove("hidden");
         } else {
             link.classList.add("hidden");
@@ -495,9 +494,9 @@ function updateLatestEma(event) {
 function dailySlotLabel(event) {
     const slot = String(event?.survey_slot || "").toLowerCase();
     const labels = {
-        morning: "Morning questionnaire · 09:00",
-        afternoon: "Afternoon questionnaire · 14:00",
-        evening: "Evening questionnaire · 20:00"
+        morning: "Morning questionnaire",
+        afternoon: "Afternoon questionnaire",
+        evening: "Evening questionnaire"
     };
     if (labels[slot]) return labels[slot];
 
@@ -506,6 +505,19 @@ function dailySlotLabel(event) {
     if (type.includes("AFTERNOON")) return labels.afternoon;
     if (type.includes("EVENING")) return labels.evening;
     return "Daily comfort questionnaire";
+}
+
+function dailySlotTime(event) {
+    const slot = String(event?.survey_slot || "").toLowerCase();
+    if (slot === "morning") return "09:00";
+    if (slot === "afternoon") return "14:00";
+    if (slot === "evening") return "20:00";
+
+    const type = String(event?.survey_type || "").toUpperCase();
+    if (type.includes("MORNING")) return "09:00";
+    if (type.includes("AFTERNOON")) return "14:00";
+    if (type.includes("EVENING")) return "20:00";
+    return "";
 }
 
 function updateLatestDaily(events) {
@@ -532,8 +544,8 @@ function updateLatestDaily(events) {
     }
 
     activeEvents
-        .sort((a, b) => occupantLabel(a).localeCompare(
-            occupantLabel(b), undefined, { numeric: true }
+        .sort((a, b) => (occupantLabel(a) || "").localeCompare(
+            occupantLabel(b) || "", undefined, { numeric: true }
         ))
         .forEach((event) => {
             const user = occupantLabel(event);
@@ -542,15 +554,13 @@ function updateLatestDaily(events) {
 
             const details = document.createElement("div");
             const title = document.createElement("h3");
-            title.textContent = `${dailySlotLabel(event)} — ${user}`;
+            title.textContent = dailySlotLabel(event);
             const schedule = document.createElement("p");
-            schedule.textContent = `Scheduled: ${formatDateTime(event.scheduled_for || event.created_at)}`;
-            const expiry = document.createElement("p");
-            expiry.className = "sensor-label";
-            expiry.textContent = event.expires_at
-                ? `Available until: ${formatDateTime(event.expires_at)}`
-                : "No expiry time available";
-            details.append(title, schedule, expiry);
+            schedule.className = "daily-meta";
+            schedule.textContent = [user, dailySlotTime(event)]
+                .filter(Boolean)
+                .join(" · ");
+            details.append(title, schedule);
 
             const link = document.createElement("a");
             const query = new URLSearchParams({
@@ -561,7 +571,7 @@ function updateLatestDaily(events) {
             link.href = `${CONFIG.DAILY_SURVEY_BASE_URL.replace(/\/$/, "")}?${query}`;
             link.target = "_blank";
             link.rel = "noopener";
-            link.textContent = `Open Daily questionnaire — ${user}`;
+            link.textContent = "Open";
             card.append(details, link);
             container.append(card);
         });
@@ -599,7 +609,7 @@ async function updateWindowSummary(summary) {
     setText(
         "window-duration-label",
         latest?.window_state === "OPEN"
-            ? "Current open session (updates every 10 seconds)"
+            ? "Current open session (updates every 30 seconds)"
             : "Most recently completed open session"
     );
 
@@ -793,12 +803,20 @@ function updateEnergyCharts(rawRows, historyHours) {
 }
 
 function updateWindowChart(rows, historyHours) {
-    const labels = rows.map((row) =>
+    const chartRows = [...rows];
+    const latest = chartRows[chartRows.length - 1];
+    if (latest) {
+        chartRows.push({
+            ...latest,
+            recorded_at: new Date().toISOString()
+        });
+    }
+    const labels = chartRows.map((row) =>
         formatChartTime(row.recorded_at, historyHours)
     );
     lineChart("windowState", "window-state-chart", labels, [{
         label: "Window",
-        data: rows.map((row) => row.window_state === "OPEN" ? 1 : 0),
+        data: chartRows.map((row) => row.window_state === "OPEN" ? 1 : 0),
         borderColor: "#0891b2",
         backgroundColor: "#0891b222",
         spanGaps: true
@@ -840,15 +858,8 @@ async function refreshDashboard() {
         updateEnergyCharts(energyHistory, hours);
         await updateWindowSummary(windowSummary);
         updateWindowChart(windowHistory, hours);
-        // Render the survey cards immediately. A separate occupants-table
-        // permission problem must never leave this section stuck on "Waiting".
         updateLatestEma(latestEma);
-        updateLatestDaily(latestDaily);
-        const [latestEmaWithOccupant, latestDailyWithOccupants] = await Promise.all([
-            attachOccupantsSafely(latestEma),
-            attachOccupantsSafely(latestDaily)
-        ]);
-        updateLatestEma(latestEmaWithOccupant);
+        const latestDailyWithOccupants = await attachOccupantsSafely(latestDaily);
         updateLatestDaily(latestDailyWithOccupants);
         setText("last-refresh", new Date().toLocaleTimeString("en-CA", {
             timeZone: CONFIG.DISPLAY_TIME_ZONE,
@@ -880,53 +891,6 @@ function startDashboard() {
     stopDashboard();
     refreshDashboard();
     refreshTimer = setInterval(refreshDashboard, Number(CONFIG.REFRESH_INTERVAL_MS) || 30000);
-    const environmentChannel = client
-        .channel("environment-dashboard")
-        .on("postgres_changes", {
-            event: "INSERT",
-            schema: "public",
-            table: CONFIG.ENVIRONMENT_TABLE,
-            filter: CONFIG.ENVIRONMENT_DEVICE_ID
-                ? `device_id=eq.${CONFIG.ENVIRONMENT_DEVICE_ID}`
-                : undefined
-        }, () => refreshDashboard())
-        .subscribe();
-    const energyChannel = client
-        .channel("energy-dashboard")
-        .on("postgres_changes", {
-            event: "INSERT",
-            schema: "public",
-            table: CONFIG.ENERGY_TABLE,
-            filter: CONFIG.ENERGY_DEVICE_ID
-                ? `device_id=eq.${CONFIG.ENERGY_DEVICE_ID}`
-                : undefined
-        }, () => refreshDashboard())
-        .subscribe();
-    const windowChannel = client
-        .channel("window-dashboard")
-        .on("postgres_changes", {
-            event: "*",
-            schema: "public",
-            table: CONFIG.WINDOW_TABLE,
-            filter: CONFIG.WINDOW_DEVICE_ID
-                ? `device_id=eq.${CONFIG.WINDOW_DEVICE_ID}`
-                : undefined
-        }, () => refreshDashboard())
-        .subscribe();
-    const surveyChannel = client
-        .channel("survey-dashboard")
-        .on("postgres_changes", {
-            event: "*",
-            schema: "public",
-            table: CONFIG.SURVEY_EVENTS_TABLE
-        }, () => refreshDashboard())
-        .subscribe();
-    realtimeChannels = [
-        environmentChannel,
-        energyChannel,
-        windowChannel,
-        surveyChannel
-    ];
 }
 
 function renderSession(newSession) {

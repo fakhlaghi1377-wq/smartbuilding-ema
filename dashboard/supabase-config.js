@@ -18,7 +18,7 @@ window.SMART_BUILDING_CONFIG = Object.freeze({
     EMA_SURVEY_BASE_URL: "https://fakhlaghi1377-wq.github.io/smartbuilding-ema",
     DAILY_SURVEY_BASE_URL: "https://fakhlaghi1377-wq.github.io/smartbuilding-ema/daily.html",
     DISPLAY_TIME_ZONE: "Asia/Tehran",
-    REFRESH_INTERVAL_MS: 10000,
+    REFRESH_INTERVAL_MS: 30000,
     PAGE_SIZE: 1000,
     MAX_HISTORY_ROWS: 10000
 });
