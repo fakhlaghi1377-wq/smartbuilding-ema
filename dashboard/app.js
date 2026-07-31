@@ -81,8 +81,7 @@ const EMA_COLUMNS = [
 
 const OCCUPANT_COLUMNS = [
     "id",
-    "occupant_code",
-    "display_name"
+    "occupant_code"
 ].join(",");
 
 let session = null;
