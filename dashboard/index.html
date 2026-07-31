@@ -207,19 +207,21 @@
 
             <section class="toolbar section-divider">
                 <div>
-                    <h2>Active Surveys</h2>
-                    <p id="survey-summary">Loading pending EMA and Daily surveys…</p>
+                    <h2>Window EMA</h2>
+                    <p id="ema-time">Waiting for a window-opening survey…</p>
                 </div>
             </section>
 
-            <section id="survey-list" class="survey-list" aria-live="polite">
-                <article class="survey-empty-card">
-                    <p>Loading surveys…</p>
-                </article>
+            <section class="ema-panel">
+                <div>
+                    <span id="ema-status" class="large-badge neutral">No pending EMA</span>
+                    <p id="ema-expiry" class="sensor-label">A link appears here after each physical window opening.</p>
+                </div>
+                <a id="ema-link" class="ema-link hidden" href="#" target="_blank" rel="noopener">Open EMA questionnaire</a>
             </section>
 
             <section class="system-information">
-                <span>Cloud refresh: <strong>30 seconds</strong></span>
+                <span>Cloud refresh: <strong>10 seconds</strong></span>
                 <span>Last refreshed: <strong id="last-refresh">--</strong></span>
                 <span>Signed in as: <strong id="signed-in-email">--</strong></span>
             </section>

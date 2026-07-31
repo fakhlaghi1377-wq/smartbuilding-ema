@@ -13,10 +13,10 @@ window.SMART_BUILDING_CONFIG = Object.freeze({
     WINDOW_TABLE: "window_events",
     WINDOW_DEVICE_ID: "ESP32_CAM_01",
     WINDOW_IMAGE_BUCKET: "window-images",
-    SURVEY_EVENT_TABLE: "survey_events",
-    SURVEY_SITE_URL: "https://fakhlaghi1377-wq.github.io/smartbuilding-ema",
+    SURVEY_EVENTS_TABLE: "survey_events",
+    EMA_SURVEY_BASE_URL: "https://fakhlaghi1377-wq.github.io/smartbuilding-ema/survey/ema",
     DISPLAY_TIME_ZONE: "Asia/Tehran",
-    REFRESH_INTERVAL_MS: 30000,
+    REFRESH_INTERVAL_MS: 10000,
     PAGE_SIZE: 1000,
     MAX_HISTORY_ROWS: 10000
 });
