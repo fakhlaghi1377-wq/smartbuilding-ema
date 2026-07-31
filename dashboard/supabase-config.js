@@ -14,6 +14,7 @@ window.SMART_BUILDING_CONFIG = Object.freeze({
     WINDOW_DEVICE_ID: "ESP32_CAM_01",
     WINDOW_IMAGE_BUCKET: "window-images",
     SURVEY_EVENTS_TABLE: "survey_events",
+    OCCUPANTS_TABLE: "occupants",
     EMA_SURVEY_BASE_URL: "https://fakhlaghi1377-wq.github.io/smartbuilding-ema",
     DAILY_SURVEY_BASE_URL: "https://fakhlaghi1377-wq.github.io/smartbuilding-ema/daily.html",
     DISPLAY_TIME_ZONE: "Asia/Tehran",

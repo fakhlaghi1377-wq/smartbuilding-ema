@@ -9,6 +9,7 @@ const requiredConfig = [
     "WINDOW_TABLE",
     "WINDOW_IMAGE_BUCKET",
     "SURVEY_EVENTS_TABLE",
+    "OCCUPANTS_TABLE",
     "EMA_SURVEY_BASE_URL",
     "DAILY_SURVEY_BASE_URL"
 ];
@@ -68,12 +69,20 @@ const EMA_COLUMNS = [
     "id",
     "survey_type",
     "survey_slot",
+    "occupant_id",
+    "claimed_by_occupant_id",
     "status",
     "access_token",
     "scheduled_for",
     "expires_at",
     "window_opened_at",
     "created_at"
+].join(",");
+
+const OCCUPANT_COLUMNS = [
+    "id",
+    "occupant_code",
+    "display_name"
 ].join(",");
 
 let session = null;
@@ -376,6 +385,37 @@ async function fetchLatestDaily() {
     }) || null;
 }
 
+async function attachOccupant(event) {
+    if (!event) return null;
+
+    const occupantId = event.occupant_id || event.claimed_by_occupant_id;
+    if (!occupantId) return event;
+
+    const { data, error } = await client
+        .from(CONFIG.OCCUPANTS_TABLE)
+        .select(OCCUPANT_COLUMNS)
+        .eq("id", occupantId)
+        .limit(1);
+    if (error) throw error;
+
+    return {
+        ...event,
+        occupant: data?.[0] || null
+    };
+}
+
+function occupantLabel(event) {
+    const raw = String(
+        event?.occupant?.occupant_code
+        || event?.occupant?.display_name
+        || ""
+    ).trim();
+
+    const numberMatch = raw.match(/(\d+)\s*$/);
+    if (numberMatch) return `User ${Number(numberMatch[1])}`;
+    return raw || "User not specified";
+}
+
 function updateLatestEma(event) {
     const link = byId("ema-link");
     const statusBadge = byId("ema-status");
@@ -407,7 +447,8 @@ function updateLatestEma(event) {
         || event.scheduled_for
         || event.created_at;
 
-    setText("ema-time", `Window opened: ${formatDateTime(openedAt)}`);
+    const user = occupantLabel(event);
+    setText("ema-time", `${user} · Window opened: ${formatDateTime(openedAt)}`);
     setText(
         "ema-expiry",
         event.expires_at
@@ -425,6 +466,7 @@ function updateLatestEma(event) {
                 token: String(event.access_token)
             });
             link.href = `${CONFIG.EMA_SURVEY_BASE_URL.replace(/\/$/, "")}/?${query}`;
+            link.textContent = `Open EMA questionnaire — ${user}`;
             link.classList.remove("hidden");
         } else {
             link.classList.add("hidden");
@@ -474,9 +516,10 @@ function updateLatestDaily(event) {
         && Boolean(event.access_token)
         && expiresAtMs > Date.now();
 
+    const user = occupantLabel(event);
     setText(
         "daily-time",
-        `${dailySlotLabel(event)} · Scheduled: ${formatDateTime(event.scheduled_for || event.created_at)}`
+        `${dailySlotLabel(event)} · ${user} · Scheduled: ${formatDateTime(event.scheduled_for || event.created_at)}`
     );
     setText(
         "daily-expiry",
@@ -495,6 +538,7 @@ function updateLatestDaily(event) {
                 token: String(event.access_token)
             });
             link.href = `${CONFIG.DAILY_SURVEY_BASE_URL.replace(/\/$/, "")}?${query}`;
+            link.textContent = `Open Daily questionnaire — ${user}`;
             link.classList.remove("hidden");
         } else {
             link.classList.add("hidden");
@@ -764,8 +808,12 @@ async function refreshDashboard() {
         updateEnergyCharts(energyHistory, hours);
         await updateWindowSummary(windowSummary);
         updateWindowChart(windowHistory, hours);
-        updateLatestEma(latestEma);
-        updateLatestDaily(latestDaily);
+        const [latestEmaWithOccupant, latestDailyWithOccupant] = await Promise.all([
+            attachOccupant(latestEma),
+            attachOccupant(latestDaily)
+        ]);
+        updateLatestEma(latestEmaWithOccupant);
+        updateLatestDaily(latestDailyWithOccupant);
         setText("last-refresh", new Date().toLocaleTimeString("en-CA", {
             timeZone: CONFIG.DISPLAY_TIME_ZONE,
             hour: "2-digit",
