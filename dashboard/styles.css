@@ -286,3 +286,12 @@ button:disabled { cursor: wait; opacity: .65; }
     .connection-box { justify-content: center; }
     .main-value { font-size: 33px; }
 }
+.weather-description {
+    margin-top: 0.65rem;
+    min-height: 2.6rem;
+    color: #0f172a;
+    font-size: 1.3rem;
+    font-weight: 700;
+    line-height: 1.25;
+    text-transform: capitalize;
+}

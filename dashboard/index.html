@@ -118,6 +118,72 @@
 
             <section class="toolbar section-divider">
                 <div>
+                    <h2>Outdoor Conditions</h2>
+                    <p id="outdoor-time">Waiting for outdoor data…</p>
+                </div>
+            </section>
+
+            <section class="cards-grid outdoor-cards-grid">
+                <article class="data-card">
+                    <h3>Outdoor Temperature</h3>
+                    <div class="value-row"><span id="outdoor-temperature" class="main-value">--</span><span class="unit">°C</span></div>
+                    <p class="sensor-label">Outdoor air temperature</p>
+                </article>
+                <article class="data-card">
+                    <h3>Outdoor Humidity</h3>
+                    <div class="value-row"><span id="outdoor-humidity" class="main-value">--</span><span class="unit">%RH</span></div>
+                    <p class="sensor-label">Outdoor relative humidity</p>
+                </article>
+                <article class="data-card">
+                    <h3>Wind Speed</h3>
+                    <div class="value-row"><span id="outdoor-wind-speed" class="main-value">--</span><span class="unit">m/s</span></div>
+                    <p class="sensor-label">Outdoor wind speed</p>
+                </article>
+                <article class="data-card">
+                    <h3>Wind Direction</h3>
+                    <div class="value-row"><span id="outdoor-wind-direction" class="main-value">--</span><span class="unit">°</span></div>
+                    <p id="outdoor-wind-cardinal" class="sensor-label">Direction unavailable</p>
+                </article>
+                <article class="data-card">
+                    <h3>Air Quality Index</h3>
+                    <div class="value-row"><span id="outdoor-aqi" class="main-value">--</span></div>
+                    <p id="outdoor-aqi-status" class="status-label neutral-text">No data</p>
+                </article>
+                <article class="data-card">
+                    <h3>PM2.5</h3>
+                    <div class="value-row"><span id="outdoor-pm25" class="main-value">--</span><span class="unit">µg/m³</span></div>
+                    <p class="sensor-label">Fine particulate matter</p>
+                </article>
+                <article class="data-card">
+                    <h3>PM10</h3>
+                    <div class="value-row"><span id="outdoor-pm10" class="main-value">--</span><span class="unit">µg/m³</span></div>
+                    <p class="sensor-label">Coarse particulate matter</p>
+                </article>
+                <article class="data-card">
+                    <h3>Weather</h3>
+                    <div id="outdoor-description" class="weather-description">--</div>
+                    <p class="sensor-label">Current outdoor condition</p>
+                </article>
+            </section>
+
+            <section class="charts-heading">
+                <div>
+                    <h2>Outdoor Trends</h2>
+                    <p id="outdoor-history-summary">Loading outdoor history…</p>
+                </div>
+            </section>
+
+            <section class="charts-grid">
+                <article class="chart-card"><h3>Outdoor Temperature</h3><div class="chart-container"><canvas id="outdoor-temperature-chart"></canvas></div></article>
+                <article class="chart-card"><h3>Outdoor Humidity</h3><div class="chart-container"><canvas id="outdoor-humidity-chart"></canvas></div></article>
+                <article class="chart-card"><h3>Wind Speed</h3><div class="chart-container"><canvas id="outdoor-wind-speed-chart"></canvas></div></article>
+                <article class="chart-card"><h3>Wind Direction</h3><div class="chart-container"><canvas id="outdoor-wind-direction-chart"></canvas></div></article>
+                <article class="chart-card"><h3>Outdoor AQI</h3><div class="chart-container"><canvas id="outdoor-aqi-chart"></canvas></div></article>
+                <article class="chart-card"><h3>Outdoor Particulate Matter</h3><div class="chart-container"><canvas id="outdoor-pm-chart"></canvas></div></article>
+            </section>
+
+            <section class="toolbar section-divider">
+                <div>
                     <h2>Energy Monitoring</h2>
                     <p id="energy-time">Waiting for data…</p>
                 </div>
