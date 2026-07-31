@@ -92,6 +92,48 @@ let charts = {};
 
 const byId = (id) => document.getElementById(id);
 
+const DASHBOARD_PAGES = new Set(["environment", "energy", "window", "surveys"]);
+
+function showDashboardPage(requestedPage, updateHash = true) {
+    const page = DASHBOARD_PAGES.has(requestedPage) ? requestedPage : "environment";
+
+    document.querySelectorAll("[data-dashboard-page]").forEach((section) => {
+        section.classList.toggle("page-hidden", section.dataset.dashboardPage !== page);
+    });
+
+    document.querySelectorAll("[data-page-target]").forEach((button) => {
+        const selected = button.dataset.pageTarget === page;
+        button.classList.toggle("active", selected);
+        button.setAttribute("aria-current", selected ? "page" : "false");
+    });
+
+    if (updateHash && window.location.hash !== `#${page}`) {
+        history.replaceState(null, "", `#${page}`);
+    }
+
+    requestAnimationFrame(() => {
+        Object.values(charts).forEach((chart) => chart?.resize());
+    });
+}
+
+function initializeDashboardNavigation() {
+    document.querySelectorAll("[data-page-target]").forEach((button) => {
+        button.addEventListener("click", () => {
+            showDashboardPage(button.dataset.pageTarget);
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+    });
+
+    const hashPage = window.location.hash.replace(/^#/, "");
+    showDashboardPage(hashPage, !DASHBOARD_PAGES.has(hashPage));
+
+    window.addEventListener("hashchange", () => {
+        showDashboardPage(window.location.hash.replace(/^#/, ""), false);
+    });
+}
+
+initializeDashboardNavigation();
+
 function setText(id, value) {
     const element = byId(id);
     if (element) element.textContent = value;

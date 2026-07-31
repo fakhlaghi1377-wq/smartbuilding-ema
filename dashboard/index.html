@@ -40,8 +40,15 @@
             </div>
         </header>
 
+        <nav class="dashboard-nav" aria-label="Dashboard sections">
+            <button class="nav-button active" type="button" data-page-target="environment">Environment</button>
+            <button class="nav-button" type="button" data-page-target="energy">Energy & Cooling</button>
+            <button class="nav-button" type="button" data-page-target="window">Window</button>
+            <button class="nav-button" type="button" data-page-target="surveys">Questionnaires</button>
+        </nav>
+
         <main class="dashboard-container">
-            <section class="toolbar">
+            <section class="toolbar dashboard-page-section" data-dashboard-page="environment">
                 <div>
                     <h2>Environmental Conditions</h2>
                     <p id="environment-time">Waiting for data…</p>
@@ -58,7 +65,7 @@
                 </label>
             </section>
 
-            <section class="cards-grid">
+            <section class="cards-grid dashboard-page-section" data-dashboard-page="environment">
                 <article class="data-card">
                     <h3>CO₂</h3>
                     <div class="value-row"><span id="co2-value" class="main-value">--</span><span class="unit">ppm</span></div>
@@ -101,14 +108,14 @@
                 </article>
             </section>
 
-            <section class="charts-heading">
+            <section class="charts-heading dashboard-page-section" data-dashboard-page="environment">
                 <div>
                     <h2>Environmental Trends</h2>
                     <p id="history-summary">Loading history…</p>
                 </div>
             </section>
 
-            <section class="charts-grid">
+            <section class="charts-grid dashboard-page-section" data-dashboard-page="environment">
                 <article class="chart-card"><h3>CO₂ History</h3><div class="chart-container"><canvas id="co2-chart"></canvas></div></article>
                 <article class="chart-card"><h3>Temperature History</h3><div class="chart-container"><canvas id="temperature-chart"></canvas></div></article>
                 <article class="chart-card"><h3>Humidity History</h3><div class="chart-container"><canvas id="humidity-chart"></canvas></div></article>
@@ -116,14 +123,14 @@
                 <article class="chart-card full-width"><h3>Motion History</h3><div class="chart-container"><canvas id="motion-chart"></canvas></div></article>
             </section>
 
-            <section class="toolbar section-divider">
+            <section class="toolbar dashboard-page-section" data-dashboard-page="energy">
                 <div>
                     <h2>Energy Monitoring</h2>
                     <p id="energy-time">Waiting for data…</p>
                 </div>
             </section>
 
-            <section class="cards-grid energy-cards-grid">
+            <section class="cards-grid energy-cards-grid dashboard-page-section" data-dashboard-page="energy">
                 <article class="data-card energy-card">
                     <h3>Current</h3>
                     <div class="value-row"><span id="energy-current" class="main-value">--</span><span class="unit">A</span></div>
@@ -151,26 +158,26 @@
                 </article>
             </section>
 
-            <section class="charts-heading">
+            <section class="charts-heading dashboard-page-section" data-dashboard-page="energy">
                 <div>
                     <h2>Energy Trends</h2>
                     <p id="energy-history-summary">Loading history…</p>
                 </div>
             </section>
 
-            <section class="charts-grid">
+            <section class="charts-grid dashboard-page-section" data-dashboard-page="energy">
                 <article class="chart-card"><h3>Real Power History</h3><div class="chart-container"><canvas id="power-chart"></canvas></div></article>
                 <article class="chart-card"><h3>Cumulative Energy History</h3><div class="chart-container"><canvas id="energy-total-chart"></canvas></div></article>
             </section>
 
-            <section class="toolbar section-divider">
+            <section class="toolbar dashboard-page-section" data-dashboard-page="window">
                 <div>
                     <h2>Window Monitoring</h2>
                     <p id="window-time">Waiting for data…</p>
                 </div>
             </section>
 
-            <section class="window-layout">
+            <section class="window-layout dashboard-page-section" data-dashboard-page="window">
                 <article class="window-image-card">
                     <h3>Latest Window Image</h3>
                     <div class="window-image-frame">
@@ -203,36 +210,36 @@
                 </section>
             </section>
 
-            <section class="charts-heading">
+            <section class="charts-heading dashboard-page-section" data-dashboard-page="window">
                 <div>
                     <h2>Window History</h2>
                     <p id="window-history-summary">Loading history…</p>
                 </div>
             </section>
 
-            <section class="charts-grid">
+            <section class="charts-grid dashboard-page-section" data-dashboard-page="window">
                 <article class="chart-card full-width"><h3>Open / Closed History</h3><div class="chart-container"><canvas id="window-state-chart"></canvas></div></article>
             </section>
 
-            <section class="toolbar section-divider">
+            <section class="toolbar dashboard-page-section" data-dashboard-page="surveys">
                 <div>
                     <h2>Window EMA</h2>
                     <p id="ema-time">Waiting for a window-opening survey…</p>
                 </div>
             </section>
 
-            <section id="ema-events" class="ema-events">
+            <section id="ema-events" class="ema-events dashboard-page-section" data-dashboard-page="surveys">
                 <p class="ema-empty">No pending EMA questionnaire.</p>
             </section>
 
-            <section class="toolbar section-divider">
+            <section class="toolbar section-divider dashboard-page-section" data-dashboard-page="surveys">
                 <div>
                     <h2>Daily Comfort Questionnaire</h2>
                     <p>Active questionnaires for User 1 and User 2</p>
                 </div>
             </section>
 
-            <section id="daily-events" class="daily-events">
+            <section id="daily-events" class="daily-events dashboard-page-section" data-dashboard-page="surveys">
                 <p class="daily-empty">Waiting for active daily questionnaires…</p>
             </section>
 
