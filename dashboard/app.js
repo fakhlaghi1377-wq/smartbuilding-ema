@@ -377,31 +377,40 @@ async function fetchLatestDaily() {
     if (error) throw error;
 
     const now = Date.now();
-    return (data || []).find((row) => {
+    return (data || []).filter((row) => {
         const expiresAt = row.expires_at
             ? new Date(row.expires_at).getTime()
             : Number.POSITIVE_INFINITY;
         return Boolean(row.access_token) && expiresAt > now;
-    }) || null;
+    });
 }
 
-async function attachOccupant(event) {
-    if (!event) return null;
+async function attachOccupants(events) {
+    const list = (Array.isArray(events) ? events : [events]).filter(Boolean);
+    if (!list.length) return Array.isArray(events) ? [] : null;
 
-    const occupantId = event.occupant_id || event.claimed_by_occupant_id;
-    if (!occupantId) return event;
+    const occupantIds = [...new Set(list
+        .map((event) => event.occupant_id || event.claimed_by_occupant_id)
+        .filter(Boolean))];
+    if (!occupantIds.length) return Array.isArray(events) ? list : list[0];
 
     const { data, error } = await client
         .from(CONFIG.OCCUPANTS_TABLE)
         .select(OCCUPANT_COLUMNS)
-        .eq("id", occupantId)
-        .limit(1);
+        .in("id", occupantIds);
     if (error) throw error;
 
-    return {
+    const occupantById = new Map((data || []).map((occupant) => [
+        String(occupant.id),
+        occupant
+    ]));
+    const attached = list.map((event) => ({
         ...event,
-        occupant: data?.[0] || null
-    };
+        occupant: occupantById.get(String(
+            event.occupant_id || event.claimed_by_occupant_id
+        )) || null
+    }));
+    return Array.isArray(events) ? attached : attached[0];
 }
 
 function occupantLabel(event) {
@@ -491,60 +500,63 @@ function dailySlotLabel(event) {
     return "Daily comfort questionnaire";
 }
 
-function updateLatestDaily(event) {
-    const link = byId("daily-link");
-    const statusBadge = byId("daily-status");
-    if (!event) {
-        setText("daily-time", "No active daily questionnaire.");
-        setText("daily-expiry", "The link appears during an active daily survey period.");
-        if (statusBadge) {
-            statusBadge.textContent = "No pending Daily";
-            statusBadge.className = "large-badge neutral";
-        }
-        if (link) {
-            link.classList.add("hidden");
-            link.removeAttribute("href");
-        }
+function updateLatestDaily(events) {
+    const container = byId("daily-events");
+    if (!container) return;
+    container.replaceChildren();
+
+    const activeEvents = (events || []).filter((event) => {
+        const status = String(event.status || "").toUpperCase();
+        const expiresAt = event.expires_at
+            ? new Date(event.expires_at).getTime()
+            : Number.POSITIVE_INFINITY;
+        return ["PENDING", "CLAIMED"].includes(status)
+            && Boolean(event.access_token)
+            && expiresAt > Date.now();
+    });
+
+    if (!activeEvents.length) {
+        const empty = document.createElement("p");
+        empty.className = "daily-empty";
+        empty.textContent = "No active daily questionnaire.";
+        container.append(empty);
         return;
     }
 
-    const expiresAtMs = event.expires_at
-        ? new Date(event.expires_at).getTime()
-        : Number.POSITIVE_INFINITY;
-    const storedStatus = String(event.status || "").toUpperCase();
-    const isActive = ["PENDING", "CLAIMED"].includes(storedStatus)
-        && Boolean(event.access_token)
-        && expiresAtMs > Date.now();
+    activeEvents
+        .sort((a, b) => occupantLabel(a).localeCompare(
+            occupantLabel(b), undefined, { numeric: true }
+        ))
+        .forEach((event) => {
+            const user = occupantLabel(event);
+            const card = document.createElement("article");
+            card.className = "daily-event-card";
 
-    const user = occupantLabel(event);
-    setText(
-        "daily-time",
-        `${dailySlotLabel(event)} · ${user} · Scheduled: ${formatDateTime(event.scheduled_for || event.created_at)}`
-    );
-    setText(
-        "daily-expiry",
-        event.expires_at
-            ? `Available until: ${formatDateTime(event.expires_at)}`
-            : "No expiry time available"
-    );
-    if (statusBadge) {
-        statusBadge.textContent = isActive ? storedStatus : "EXPIRED";
-        statusBadge.className = `large-badge ${isActive ? "success" : "neutral"}`;
-    }
-    if (link) {
-        if (isActive) {
+            const details = document.createElement("div");
+            const title = document.createElement("h3");
+            title.textContent = `${dailySlotLabel(event)} — ${user}`;
+            const schedule = document.createElement("p");
+            schedule.textContent = `Scheduled: ${formatDateTime(event.scheduled_for || event.created_at)}`;
+            const expiry = document.createElement("p");
+            expiry.className = "sensor-label";
+            expiry.textContent = event.expires_at
+                ? `Available until: ${formatDateTime(event.expires_at)}`
+                : "No expiry time available";
+            details.append(title, schedule, expiry);
+
+            const link = document.createElement("a");
             const query = new URLSearchParams({
                 event: String(event.id),
                 token: String(event.access_token)
             });
+            link.className = "ema-link";
             link.href = `${CONFIG.DAILY_SURVEY_BASE_URL.replace(/\/$/, "")}?${query}`;
+            link.target = "_blank";
+            link.rel = "noopener";
             link.textContent = `Open Daily questionnaire — ${user}`;
-            link.classList.remove("hidden");
-        } else {
-            link.classList.add("hidden");
-            link.removeAttribute("href");
-        }
-    }
+            card.append(details, link);
+            container.append(card);
+        });
 }
 
 async function updateWindowSummary(summary) {
@@ -565,10 +577,22 @@ async function updateWindowSummary(summary) {
         }
     }
 
-    const duration = Number(summary?.latestDuration?.open_duration_seconds);
+    const completedDuration = Number(summary?.latestDuration?.open_duration_seconds);
+    const latestRecordedAt = latest?.recorded_at
+        ? new Date(latest.recorded_at).getTime()
+        : Number.NaN;
+    const duration = latest?.window_state === "OPEN" && Number.isFinite(latestRecordedAt)
+        ? Math.max(0, (Date.now() - latestRecordedAt) / 1000)
+        : completedDuration;
     setText(
         "window-duration",
         Number.isFinite(duration) ? (duration / 60).toFixed(1) : "--"
+    );
+    setText(
+        "window-duration-label",
+        latest?.window_state === "OPEN"
+            ? "Current open session (updates every 10 seconds)"
+            : "Most recently completed open session"
     );
 
     const imageRow = summary?.latestImage;
@@ -808,12 +832,12 @@ async function refreshDashboard() {
         updateEnergyCharts(energyHistory, hours);
         await updateWindowSummary(windowSummary);
         updateWindowChart(windowHistory, hours);
-        const [latestEmaWithOccupant, latestDailyWithOccupant] = await Promise.all([
-            attachOccupant(latestEma),
-            attachOccupant(latestDaily)
+        const [latestEmaWithOccupant, latestDailyWithOccupants] = await Promise.all([
+            attachOccupants(latestEma),
+            attachOccupants(latestDaily)
         ]);
         updateLatestEma(latestEmaWithOccupant);
-        updateLatestDaily(latestDailyWithOccupant);
+        updateLatestDaily(latestDailyWithOccupants);
         setText("last-refresh", new Date().toLocaleTimeString("en-CA", {
             timeZone: CONFIG.DISPLAY_TIME_ZONE,
             hour: "2-digit",

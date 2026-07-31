@@ -189,7 +189,7 @@
                     <article class="data-card window-card">
                         <h3>Last Open Duration</h3>
                         <div class="value-row"><span id="window-duration" class="main-value">--</span><span class="unit">min</span></div>
-                        <p class="sensor-label">Most recently completed open session</p>
+                        <p id="window-duration-label" class="sensor-label">Most recently completed open session</p>
                     </article>
                 </section>
             </section>
@@ -223,16 +223,12 @@
             <section class="toolbar section-divider">
                 <div>
                     <h2>Daily Comfort Questionnaire</h2>
-                    <p id="daily-time">Waiting for an active daily questionnaire…</p>
+                    <p>Each active questionnaire is shown separately for User 1 and User 2.</p>
                 </div>
             </section>
 
-            <section class="ema-panel">
-                <div>
-                    <span id="daily-status" class="large-badge neutral">No pending Daily</span>
-                    <p id="daily-expiry" class="sensor-label">The link appears during an active daily survey period.</p>
-                </div>
-                <a id="daily-link" class="ema-link hidden" href="#" target="_blank" rel="noopener">Open Daily questionnaire</a>
+            <section id="daily-events" class="daily-events">
+                <p class="daily-empty">Waiting for active daily questionnaires…</p>
             </section>
 
             <section class="system-information">

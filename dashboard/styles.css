@@ -220,6 +220,35 @@ button:disabled { cursor: wait; opacity: .65; }
 
 .ema-link:hover { background: #6d28d9; }
 
+.daily-events {
+    display: grid;
+    gap: 14px;
+}
+
+.daily-event-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 21px;
+    border: 1px solid var(--border);
+    border-left: 5px solid #0f766e;
+    border-radius: 15px;
+    background: var(--surface);
+    box-shadow: 0 5px 16px rgba(15, 23, 42, .045);
+}
+
+.daily-event-card h3 { margin: 0 0 8px; color: var(--heading); }
+.daily-event-card p { margin: 0; }
+.daily-empty {
+    margin: 0;
+    padding: 21px;
+    border: 1px solid var(--border);
+    border-radius: 15px;
+    color: var(--muted);
+    background: var(--surface);
+}
+
 .system-information {
     display: flex;
     flex-wrap: wrap;
@@ -243,6 +272,7 @@ button:disabled { cursor: wait; opacity: .65; }
     .window-layout { grid-template-columns: 1fr; }
     .window-cards-grid { grid-template-columns: 1fr; }
     .ema-panel { align-items: stretch; flex-direction: column; }
+    .daily-event-card { align-items: stretch; flex-direction: column; }
     .ema-link { width: 100%; }
 }
 
