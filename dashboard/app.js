@@ -9,7 +9,8 @@ const requiredConfig = [
     "WINDOW_TABLE",
     "WINDOW_IMAGE_BUCKET",
     "SURVEY_EVENTS_TABLE",
-    "EMA_SURVEY_BASE_URL"
+    "EMA_SURVEY_BASE_URL",
+    "DAILY_SURVEY_BASE_URL"
 ];
 for (const key of requiredConfig) {
     if (!CONFIG || !CONFIG[key]) {
@@ -65,6 +66,8 @@ const WINDOW_COLUMNS = [
 
 const EMA_COLUMNS = [
     "id",
+    "survey_type",
+    "survey_slot",
     "status",
     "access_token",
     "scheduled_for",
@@ -354,6 +357,25 @@ async function fetchLatestEma() {
     }) || rows[0] || null;
 }
 
+async function fetchLatestDaily() {
+    const { data, error } = await client
+        .from(CONFIG.SURVEY_EVENTS_TABLE)
+        .select(EMA_COLUMNS)
+        .neq("survey_type", "WINDOW_OPEN")
+        .in("status", ["PENDING", "CLAIMED"])
+        .order("scheduled_for", { ascending: false, nullsFirst: false })
+        .limit(50);
+    if (error) throw error;
+
+    const now = Date.now();
+    return (data || []).find((row) => {
+        const expiresAt = row.expires_at
+            ? new Date(row.expires_at).getTime()
+            : Number.POSITIVE_INFINITY;
+        return Boolean(row.access_token) && expiresAt > now;
+    }) || null;
+}
+
 function updateLatestEma(event) {
     const link = byId("ema-link");
     const statusBadge = byId("ema-status");
@@ -403,6 +425,76 @@ function updateLatestEma(event) {
                 token: String(event.access_token)
             });
             link.href = `${CONFIG.EMA_SURVEY_BASE_URL.replace(/\/$/, "")}/?${query}`;
+            link.classList.remove("hidden");
+        } else {
+            link.classList.add("hidden");
+            link.removeAttribute("href");
+        }
+    }
+}
+
+function dailySlotLabel(event) {
+    const slot = String(event?.survey_slot || "").toLowerCase();
+    const labels = {
+        morning: "Morning questionnaire · 09:00",
+        afternoon: "Afternoon questionnaire · 14:00",
+        evening: "Evening questionnaire · 20:00"
+    };
+    if (labels[slot]) return labels[slot];
+
+    const type = String(event?.survey_type || "").toUpperCase();
+    if (type.includes("MORNING")) return labels.morning;
+    if (type.includes("AFTERNOON")) return labels.afternoon;
+    if (type.includes("EVENING")) return labels.evening;
+    return "Daily comfort questionnaire";
+}
+
+function updateLatestDaily(event) {
+    const link = byId("daily-link");
+    const statusBadge = byId("daily-status");
+    if (!event) {
+        setText("daily-time", "No active daily questionnaire.");
+        setText("daily-expiry", "The link appears during an active daily survey period.");
+        if (statusBadge) {
+            statusBadge.textContent = "No pending Daily";
+            statusBadge.className = "large-badge neutral";
+        }
+        if (link) {
+            link.classList.add("hidden");
+            link.removeAttribute("href");
+        }
+        return;
+    }
+
+    const expiresAtMs = event.expires_at
+        ? new Date(event.expires_at).getTime()
+        : Number.POSITIVE_INFINITY;
+    const storedStatus = String(event.status || "").toUpperCase();
+    const isActive = ["PENDING", "CLAIMED"].includes(storedStatus)
+        && Boolean(event.access_token)
+        && expiresAtMs > Date.now();
+
+    setText(
+        "daily-time",
+        `${dailySlotLabel(event)} · Scheduled: ${formatDateTime(event.scheduled_for || event.created_at)}`
+    );
+    setText(
+        "daily-expiry",
+        event.expires_at
+            ? `Available until: ${formatDateTime(event.expires_at)}`
+            : "No expiry time available"
+    );
+    if (statusBadge) {
+        statusBadge.textContent = isActive ? storedStatus : "EXPIRED";
+        statusBadge.className = `large-badge ${isActive ? "success" : "neutral"}`;
+    }
+    if (link) {
+        if (isActive) {
+            const query = new URLSearchParams({
+                event: String(event.id),
+                token: String(event.access_token)
+            });
+            link.href = `${CONFIG.DAILY_SURVEY_BASE_URL.replace(/\/$/, "")}?${query}`;
             link.classList.remove("hidden");
         } else {
             link.classList.add("hidden");
@@ -654,7 +746,8 @@ async function refreshDashboard() {
             energyHistory,
             windowSummary,
             windowHistory,
-            latestEma
+            latestEma,
+            latestDaily
         ] = await Promise.all([
             fetchLatestReading(),
             fetchHistory(hours),
@@ -662,7 +755,8 @@ async function refreshDashboard() {
             fetchEnergyHistory(hours),
             fetchWindowSummary(),
             fetchWindowHistory(hours),
-            fetchLatestEma()
+            fetchLatestEma(),
+            fetchLatestDaily()
         ]);
         updateLatest(latest);
         updateCharts(history, hours);
@@ -671,6 +765,7 @@ async function refreshDashboard() {
         await updateWindowSummary(windowSummary);
         updateWindowChart(windowHistory, hours);
         updateLatestEma(latestEma);
+        updateLatestDaily(latestDaily);
         setText("last-refresh", new Date().toLocaleTimeString("en-CA", {
             timeZone: CONFIG.DISPLAY_TIME_ZONE,
             hour: "2-digit",
