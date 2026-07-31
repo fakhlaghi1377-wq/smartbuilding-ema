@@ -5,7 +5,6 @@ const requiredConfig = [
     "SUPABASE_URL",
     "SUPABASE_PUBLISHABLE_KEY",
     "ENVIRONMENT_TABLE",
-    "OUTDOOR_WEATHER_TABLE",
     "ENERGY_TABLE",
     "WINDOW_TABLE",
     "WINDOW_IMAGE_BUCKET",
@@ -43,21 +42,6 @@ const ENVIRONMENT_COLUMNS = [
     "sht31_humidity_rh",
     "illuminance_lux",
     "motion_detected"
-].join(",");
-
-const OUTDOOR_WEATHER_COLUMNS = [
-    "recorded_at",
-    "temperature_c",
-    "humidity_percent",
-    "wind_speed_mps",
-    "wind_direction_deg",
-    "weather_description",
-    "aqi",
-    "pm25_ug_m3",
-    "pm10_ug_m3",
-    "co_ug_m3",
-    "no2_ug_m3",
-    "o3_ug_m3"
 ].join(",");
 
 const ENERGY_COLUMNS = [
@@ -247,87 +231,6 @@ async function fetchHistory(hours) {
     return rows;
 }
 
-async function fetchLatestOutdoorWeather() {
-    const { data, error } = await client
-        .from(CONFIG.OUTDOOR_WEATHER_TABLE)
-        .select(OUTDOOR_WEATHER_COLUMNS)
-        .order("recorded_at", { ascending: false })
-        .limit(1);
-    if (error) throw error;
-    return data?.[0] || null;
-}
-
-async function fetchOutdoorWeatherHistory(hours) {
-    const since = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
-    const pageSize = Math.min(Math.max(Number(CONFIG.PAGE_SIZE) || 1000, 1), 1000);
-    const maxRows = Math.max(Number(CONFIG.MAX_HISTORY_ROWS) || 10000, pageSize);
-    const rows = [];
-
-    for (let from = 0; from < maxRows; from += pageSize) {
-        const { data, error } = await client
-            .from(CONFIG.OUTDOOR_WEATHER_TABLE)
-            .select(OUTDOOR_WEATHER_COLUMNS)
-            .gte("recorded_at", since)
-            .order("recorded_at", { ascending: true })
-            .range(from, from + pageSize - 1);
-        if (error) throw error;
-        rows.push(...(data || []));
-        if (!data || data.length < pageSize) break;
-    }
-    return rows;
-}
-
-function windDirectionToCardinal(value) {
-    const degrees = Number(value);
-    if (!Number.isFinite(degrees)) return "Direction unavailable";
-    const directions = [
-        "N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
-        "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"
-    ];
-    return directions[Math.round(((degrees % 360) + 360) % 360 / 22.5) % 16];
-}
-
-function updateOutdoorAqiStatus(value) {
-    const element = byId("outdoor-aqi-status");
-    if (!element) return;
-    const labels = {
-        1: ["Good", "success-text"],
-        2: ["Fair", "success-text"],
-        3: ["Moderate", "warning-text"],
-        4: ["Poor", "danger-text"],
-        5: ["Very poor", "danger-text"]
-    };
-    const match = labels[Number(value)];
-    element.textContent = match?.[0] || "No data";
-    element.className = `status-label ${match?.[1] || "neutral-text"}`;
-}
-
-function updateLatestOutdoorWeather(weather) {
-    if (!weather) {
-        setText("outdoor-time", "No outdoor data available");
-        [
-            "outdoor-temperature", "outdoor-humidity", "outdoor-wind-speed",
-            "outdoor-wind-direction", "outdoor-aqi", "outdoor-pm25",
-            "outdoor-pm10"
-        ].forEach((id) => setText(id, "--"));
-        setText("outdoor-wind-cardinal", "Direction unavailable");
-        setText("outdoor-description", "--");
-        updateOutdoorAqiStatus(null);
-        return;
-    }
-    setText("outdoor-temperature", formatNumber(weather.temperature_c, 1));
-    setText("outdoor-humidity", formatNumber(weather.humidity_percent, 0));
-    setText("outdoor-wind-speed", formatNumber(weather.wind_speed_mps, 1));
-    setText("outdoor-wind-direction", formatNumber(weather.wind_direction_deg, 0));
-    setText("outdoor-wind-cardinal", windDirectionToCardinal(weather.wind_direction_deg));
-    setText("outdoor-aqi", formatNumber(weather.aqi, 0));
-    setText("outdoor-pm25", formatNumber(weather.pm25_ug_m3, 1));
-    setText("outdoor-pm10", formatNumber(weather.pm10_ug_m3, 1));
-    setText("outdoor-description", weather.weather_description || "--");
-    setText("outdoor-time", `Latest outdoor measurement: ${formatDateTime(weather.recorded_at)}`);
-    updateOutdoorAqiStatus(weather.aqi);
-}
-
 async function fetchLatestEnergy() {
     let query = client
         .from(CONFIG.ENERGY_TABLE)
@@ -401,25 +304,35 @@ async function fetchWindowSummary() {
         .not("open_duration_seconds", "is", null)
         .order("recorded_at", { ascending: false })
         .limit(1);
+    let visionQuery = client
+        .from(CONFIG.WINDOW_TABLE)
+        .select(WINDOW_COLUMNS)
+        .not("vision_window_state", "is", null)
+        .order("recorded_at", { ascending: false })
+        .limit(4);
 
     if (CONFIG.WINDOW_DEVICE_ID) {
         latestQuery = latestQuery.eq("device_id", CONFIG.WINDOW_DEVICE_ID);
         imageQuery = imageQuery.eq("device_id", CONFIG.WINDOW_DEVICE_ID);
         durationQuery = durationQuery.eq("device_id", CONFIG.WINDOW_DEVICE_ID);
+        visionQuery = visionQuery.eq("device_id", CONFIG.WINDOW_DEVICE_ID);
     }
 
-    const [latestResult, imageResult, durationResult] = await Promise.all([
+    const [latestResult, imageResult, durationResult, visionResult] = await Promise.all([
         latestQuery,
         imageQuery,
-        durationQuery
+        durationQuery,
+        visionQuery
     ]);
     if (latestResult.error) throw latestResult.error;
     if (imageResult.error) throw imageResult.error;
     if (durationResult.error) throw durationResult.error;
+    if (visionResult.error) throw visionResult.error;
     return {
         latest: latestResult.data?.[0] || null,
         latestImage: imageResult.data?.[0] || null,
-        latestDuration: durationResult.data?.[0] || null
+        latestDuration: durationResult.data?.[0] || null,
+        visionRows: visionResult.data || []
     };
 }
 
@@ -440,7 +353,7 @@ async function fetchWindowHistory(hours) {
     return data || [];
 }
 
-async function fetchLatestEma() {
+async function fetchPendingEma() {
     const { data, error } = await client
         .from(CONFIG.SURVEY_EVENTS_TABLE)
         .select(EMA_COLUMNS)
@@ -450,8 +363,7 @@ async function fetchLatestEma() {
     if (error) throw error;
 
     const now = Date.now();
-    const rows = data || [];
-    return rows.find((row) => {
+    return (data || []).filter((row) => {
         const status = String(row.status || "").toUpperCase();
         const expiresAt = row.expires_at
             ? new Date(row.expires_at).getTime()
@@ -459,7 +371,7 @@ async function fetchLatestEma() {
         return status === "PENDING"
             && Boolean(row.access_token)
             && expiresAt > now;
-    }) || rows[0] || null;
+    });
 }
 
 async function fetchLatestDaily() {
@@ -530,62 +442,45 @@ function occupantLabel(event) {
     return raw;
 }
 
-function updateLatestEma(event) {
-    const link = byId("ema-link");
-    const statusBadge = byId("ema-status");
-    if (!event) {
+function updatePendingEma(events) {
+    const container = byId("ema-events");
+    if (!container) return;
+    container.replaceChildren();
+    const pendingEvents = events || [];
+    if (!pendingEvents.length) {
         setText("ema-time", "No window-opening EMA has been created yet.");
-        setText("ema-expiry", "A link appears here after each physical window opening.");
-        if (statusBadge) {
-            statusBadge.textContent = "No pending EMA";
-            statusBadge.className = "large-badge neutral";
-        }
-        if (link) {
-            link.classList.add("hidden");
-            link.removeAttribute("href");
-        }
+        const empty = document.createElement("p");
+        empty.className = "ema-empty";
+        empty.textContent = "No pending EMA questionnaire.";
+        container.append(empty);
         return;
     }
-
-    const storedStatus = String(event.status || "").toUpperCase();
-    const expiresAtMs = event.expires_at
-        ? new Date(event.expires_at).getTime()
-        : Number.POSITIVE_INFINITY;
-    const isPending = storedStatus === "PENDING"
-        && Boolean(event.access_token)
-        && expiresAtMs > Date.now();
-    const effectiveStatus = (
-        storedStatus === "PENDING" && expiresAtMs <= Date.now()
-    ) ? "EXPIRED" : storedStatus;
-    const openedAt = event.window_opened_at
-        || event.scheduled_for
-        || event.created_at;
-
-    setText("ema-time", `Window opened: ${formatDateTime(openedAt)}`);
-    setText(
-        "ema-expiry",
-        event.expires_at
-            ? `Available until: ${formatDateTime(event.expires_at)}`
-            : "No expiry time available"
-    );
-    if (statusBadge) {
-        statusBadge.textContent = effectiveStatus || "UNKNOWN";
-        statusBadge.className = `large-badge ${isPending ? "success" : "neutral"}`;
-    }
-    if (link) {
-        if (isPending) {
+    setText("ema-time", `${pendingEvents.length} pending window-opening EMA questionnaire(s)`);
+    pendingEvents.forEach((event, index) => {
+            const openedAt = event.window_opened_at || event.scheduled_for || event.created_at;
+            const card = document.createElement("article");
+            card.className = "ema-event-card";
+            const title = document.createElement("h3");
+            title.textContent = `EMA ${pendingEvents.length - index}`;
+            const opened = document.createElement("p");
+            opened.textContent = `Opened: ${formatDateTime(openedAt)}`;
+            const expiry = document.createElement("p");
+            expiry.textContent = event.expires_at
+                ? `Available until: ${formatDateTime(event.expires_at)}`
+                : "No expiry time";
+            const link = document.createElement("a");
             const query = new URLSearchParams({
                 event: String(event.id),
                 token: String(event.access_token)
             });
+            link.className = "ema-link";
             link.href = `${CONFIG.EMA_SURVEY_BASE_URL.replace(/\/$/, "")}/?${query}`;
-            link.textContent = "Open EMA questionnaire";
-            link.classList.remove("hidden");
-        } else {
-            link.classList.add("hidden");
-            link.removeAttribute("href");
-        }
-    }
+            link.target = "_blank";
+            link.rel = "noopener";
+            link.textContent = "Open";
+            card.append(title, opened, expiry, link);
+            container.append(card);
+    });
 }
 
 function dailySlotLabel(event) {
@@ -709,6 +604,7 @@ async function updateWindowSummary(summary) {
             ? "Current open session (updates every 30 seconds)"
             : "Most recently completed open session"
     );
+    updateVisionSummary(summary?.visionRows || []);
 
     const imageRow = summary?.latestImage;
     const image = byId("window-image");
@@ -736,6 +632,38 @@ async function updateWindowSummary(summary) {
         "window-image-time",
         `Captured: ${formatDateTime(imageRow.recorded_at)}`
     );
+}
+
+function clearVisionSummary() {
+    setText("vision-current-state", "");
+    setText("vision-current-meta", "");
+    const list = byId("vision-history-list");
+    if (list) list.replaceChildren();
+}
+
+function updateVisionSummary(rows) {
+    clearVisionSummary();
+    const current = rows[0];
+    if (!current) return;
+    const state = String(current.vision_window_state || "").toUpperCase();
+    const badge = byId("vision-current-state");
+    if (badge) {
+        badge.textContent = state;
+        badge.className = `large-badge ${state === "OPEN" ? "success" : "neutral"}`;
+    }
+    const confidence = Number(current.vision_confidence);
+    setText(
+        "vision-current-meta",
+        `${Number.isFinite(confidence) ? `${(confidence * (confidence <= 1 ? 100 : 1)).toFixed(1)}% · ` : ""}${formatDateTime(current.recorded_at)}`
+    );
+    const list = byId("vision-history-list");
+    (rows.slice(1, 4)).forEach((row) => {
+        const item = document.createElement("li");
+        const stateText = document.createElement("span");
+        stateText.textContent = String(row.vision_window_state || "").toUpperCase();
+        item.append(stateText, ` · ${formatDateTime(row.recorded_at)}`);
+        list?.append(item);
+    });
 }
 
 function average(items, field) {
@@ -799,34 +727,6 @@ function aggregateEnergyHistory(rows, historyHours) {
         recorded_at: new Date(time).toISOString(),
         real_power_w: average(items, "real_power_w"),
         total_energy_kwh: lastFinite(items, "total_energy_kwh")
-    }));
-}
-
-function aggregateOutdoorHistory(rows, historyHours) {
-    const targetPoints = 288;
-    const bucketMs = Math.max(
-        60 * 1000,
-        Math.ceil((historyHours * 60 * 60 * 1000) / targetPoints / 60000) * 60000
-    );
-    const buckets = new Map();
-
-    for (const row of rows) {
-        const timestamp = new Date(row.recorded_at).getTime();
-        if (!Number.isFinite(timestamp)) continue;
-        const key = Math.floor(timestamp / bucketMs) * bucketMs;
-        if (!buckets.has(key)) buckets.set(key, []);
-        buckets.get(key).push(row);
-    }
-
-    return [...buckets.entries()].sort((a, b) => a[0] - b[0]).map(([time, items]) => ({
-        recorded_at: new Date(time).toISOString(),
-        temperature_c: average(items, "temperature_c"),
-        humidity_percent: average(items, "humidity_percent"),
-        wind_speed_mps: average(items, "wind_speed_mps"),
-        wind_direction_deg: average(items, "wind_direction_deg"),
-        aqi: average(items, "aqi"),
-        pm25_ug_m3: average(items, "pm25_ug_m3"),
-        pm10_ug_m3: average(items, "pm10_ug_m3")
     }));
 }
 
@@ -927,44 +827,6 @@ function updateEnergyCharts(rawRows, historyHours) {
     );
 }
 
-function updateOutdoorCharts(rawRows, historyHours) {
-    const rows = aggregateOutdoorHistory(rawRows, historyHours);
-    const labels = rows.map((row) => formatChartTime(row.recorded_at, historyHours));
-    const dataset = (label, field, color) => ({
-        label,
-        data: rows.map((row) => row[field]),
-        borderColor: color,
-        backgroundColor: `${color}22`,
-        spanGaps: true
-    });
-
-    lineChart("outdoorTemperature", "outdoor-temperature-chart", labels, [
-        dataset("Outdoor Temperature", "temperature_c", "#dc2626")
-    ], "°C");
-    lineChart("outdoorHumidity", "outdoor-humidity-chart", labels, [
-        dataset("Outdoor Humidity", "humidity_percent", "#2563eb")
-    ], "%RH");
-    lineChart("outdoorWindSpeed", "outdoor-wind-speed-chart", labels, [
-        dataset("Wind Speed", "wind_speed_mps", "#0891b2")
-    ], "m/s");
-    lineChart("outdoorWindDirection", "outdoor-wind-direction-chart", labels, [
-        dataset("Wind Direction", "wind_direction_deg", "#7c3aed")
-    ], "Degrees");
-    lineChart("outdoorAqi", "outdoor-aqi-chart", labels, [
-        dataset("AQI", "aqi", "#f97316")
-    ], "AQI (1–5)");
-    lineChart("outdoorPm", "outdoor-pm-chart", labels, [
-        dataset("PM2.5", "pm25_ug_m3", "#db2777"),
-        dataset("PM10", "pm10_ug_m3", "#9333ea")
-    ], "µg/m³");
-
-    const capped = rawRows.length >= Number(CONFIG.MAX_HISTORY_ROWS);
-    setText(
-        "outdoor-history-summary",
-        `${rawRows.length.toLocaleString()} measurements · ${rows.length.toLocaleString()} chart intervals${capped ? " · maximum row limit reached" : ""}`
-    );
-}
-
 function updateWindowChart(rows, historyHours) {
     const chartRows = [...rows];
     const latest = chartRows[chartRows.length - 1];
@@ -974,16 +836,57 @@ function updateWindowChart(rows, historyHours) {
             recorded_at: new Date().toISOString()
         });
     }
-    const labels = chartRows.map((row) =>
-        formatChartTime(row.recorded_at, historyHours)
-    );
-    lineChart("windowState", "window-state-chart", labels, [{
-        label: "Window",
-        data: chartRows.map((row) => row.window_state === "OPEN" ? 1 : 0),
-        borderColor: "#0891b2",
-        backgroundColor: "#0891b222",
-        spanGaps: true
-    }], "0 = Closed · 1 = Open", true);
+    destroyChart("windowState");
+    const canvas = byId("window-state-chart");
+    if (canvas) {
+        const now = Date.now();
+        const start = now - historyHours * 60 * 60 * 1000;
+        charts.windowState = new Chart(canvas, {
+            type: "line",
+            data: { datasets: [{
+                label: "Window",
+                data: chartRows.map((row) => ({
+                    x: new Date(row.recorded_at).getTime(),
+                    y: row.window_state === "OPEN" ? 1 : 0
+                })).filter((point) => Number.isFinite(point.x)),
+                borderColor: "#0891b2",
+                backgroundColor: "#0891b222",
+                pointRadius: 2,
+                stepped: true
+            }] },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                parsing: false,
+                interaction: { mode: "nearest", intersect: false },
+                plugins: {
+                    legend: { position: "bottom" },
+                    tooltip: { callbacks: {
+                        title: (items) => items.length ? formatDateTime(items[0].parsed.x) : "",
+                        label: (item) => item.parsed.y === 1 ? "Open" : "Closed"
+                    }}
+                },
+                scales: {
+                    x: {
+                        type: "linear",
+                        min: start,
+                        max: now,
+                        ticks: {
+                            maxTicksLimit: 10,
+                            maxRotation: 0,
+                            callback: (value) => formatChartTime(value, historyHours)
+                        }
+                    },
+                    y: {
+                        min: 0,
+                        max: 1,
+                        ticks: { stepSize: 1, callback: (value) => value === 1 ? "Open" : "Closed" }
+                    }
+                }
+            }
+        });
+    }
     setText(
         "window-history-summary",
         `${rows.length.toLocaleString()} transition events`
@@ -999,35 +902,29 @@ async function refreshDashboard() {
         const [
             latest,
             history,
-            latestOutdoor,
-            outdoorHistory,
             latestEnergy,
             energyHistory,
             windowSummary,
             windowHistory,
-            latestEma,
+            pendingEma,
             latestDaily
         ] = await Promise.all([
             fetchLatestReading(),
             fetchHistory(hours),
-            fetchLatestOutdoorWeather(),
-            fetchOutdoorWeatherHistory(hours),
             fetchLatestEnergy(),
             fetchEnergyHistory(hours),
             fetchWindowSummary(),
             fetchWindowHistory(hours),
-            fetchLatestEma(),
+            fetchPendingEma(),
             fetchLatestDaily()
         ]);
         updateLatest(latest);
         updateCharts(history, hours);
-        updateLatestOutdoorWeather(latestOutdoor);
-        updateOutdoorCharts(outdoorHistory, hours);
         updateLatestEnergy(latestEnergy);
         updateEnergyCharts(energyHistory, hours);
         await updateWindowSummary(windowSummary);
         updateWindowChart(windowHistory, hours);
-        updateLatestEma(latestEma);
+        updatePendingEma(pendingEma);
         const latestDailyWithOccupants = await attachOccupantsSafely(latestDaily);
         updateLatestDaily(latestDailyWithOccupants);
         setText("last-refresh", new Date().toLocaleTimeString("en-CA", {
@@ -1040,6 +937,7 @@ async function refreshDashboard() {
         updateConnectionStatus(true, "Cloud connected");
     } catch (error) {
         console.error("Dashboard refresh failed:", error);
+        if (!navigator.onLine) clearVisionSummary();
         const message = error?.message?.includes("row-level security")
             ? "Access denied by security policy"
             : "Cloud connection failed";
@@ -1088,7 +986,10 @@ byId("login-form")?.addEventListener("submit", async (event) => {
 byId("logout-button")?.addEventListener("click", () => client.auth.signOut());
 byId("history-hours")?.addEventListener("change", refreshDashboard);
 window.addEventListener("online", refreshDashboard);
-window.addEventListener("offline", () => updateConnectionStatus(false, "Internet disconnected"));
+window.addEventListener("offline", () => {
+    updateConnectionStatus(false, "Internet disconnected");
+    clearVisionSummary();
+});
 document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") refreshDashboard();
 });
