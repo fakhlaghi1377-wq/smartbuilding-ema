@@ -413,6 +413,15 @@ async function attachOccupants(events) {
     return Array.isArray(events) ? attached : attached[0];
 }
 
+async function attachOccupantsSafely(events) {
+    try {
+        return await attachOccupants(events);
+    } catch (error) {
+        console.error("Could not load occupant labels:", error);
+        return events;
+    }
+}
+
 function occupantLabel(event) {
     const raw = String(
         event?.occupant?.occupant_code
@@ -832,9 +841,13 @@ async function refreshDashboard() {
         updateEnergyCharts(energyHistory, hours);
         await updateWindowSummary(windowSummary);
         updateWindowChart(windowHistory, hours);
+        // Render the survey cards immediately. A separate occupants-table
+        // permission problem must never leave this section stuck on "Waiting".
+        updateLatestEma(latestEma);
+        updateLatestDaily(latestDaily);
         const [latestEmaWithOccupant, latestDailyWithOccupants] = await Promise.all([
-            attachOccupants(latestEma),
-            attachOccupants(latestDaily)
+            attachOccupantsSafely(latestEma),
+            attachOccupantsSafely(latestDaily)
         ]);
         updateLatestEma(latestEmaWithOccupant);
         updateLatestDaily(latestDailyWithOccupants);
