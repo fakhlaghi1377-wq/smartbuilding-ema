@@ -11,7 +11,7 @@ const views = {
     closed: document.getElementById("closed-view"),
 };
 
-const steps = Array.from(document.querySelectorAll(".survey-step"));
+const allSteps = Array.from(document.querySelectorAll(".survey-step"));
 const previousButton = document.getElementById("previous-button");
 const nextButton = document.getElementById("next-button");
 const submitButton = document.getElementById("submit-button");
@@ -62,44 +62,67 @@ document.querySelectorAll('input[name="opening_reason"]').forEach(input => {
     input.addEventListener("change", updateOtherField);
 });
 
+function shouldShowAirSourceStep() {
+    return document.querySelector('input[name="air_movement"]:checked')?.value === "1";
+}
+
+function getVisibleSteps() {
+    return allSteps.filter(step => {
+        if (step.dataset.conditional === "air-source") {
+            return shouldShowAirSourceStep();
+        }
+        return true;
+    });
+}
+
 function updateAirSourceRequirement() {
     const movement = document.querySelector('input[name="air_movement"]:checked')?.value;
     const sourceInputs = Array.from(document.querySelectorAll('input[name="air_source"]'));
-    const helper = document.getElementById("air-source-helper");
+    const sourceStep = document.getElementById("air-source-step");
 
     if (movement === "0") {
         sourceInputs.forEach(input => {
             input.required = false;
-            input.checked = input.value === "unknown";
+            input.checked = false;
         });
-        helper?.classList.remove("hidden");
+        sourceStep?.classList.remove("active");
+    } else if (movement === "1") {
+        sourceInputs.forEach((input, index) => {
+            input.required = index === 0;
+        });
     } else {
-        sourceInputs.forEach((input, index) => input.required = index === 0);
-        if (movement === "1" && document.querySelector('input[name="air_source"]:checked')?.value === "unknown") {
-            sourceInputs.forEach(input => input.checked = false);
-        }
-        helper?.classList.add("hidden");
+        sourceInputs.forEach(input => {
+            input.required = false;
+            input.checked = false;
+        });
     }
 }
 
+
 document.querySelectorAll('input[name="air_movement"]').forEach(input => {
-    input.addEventListener("change", updateAirSourceRequirement);
+    input.addEventListener("change", () => {
+        updateAirSourceRequirement();
+        if (views.survey?.classList.contains("active")) updateWizard();
+    });
 });
 
 function updateWizard() {
-    steps.forEach((step, index) => step.classList.toggle("active", index === currentStepIndex));
+    const visibleSteps = getVisibleSteps();
+    currentStepIndex = Math.min(currentStepIndex, Math.max(visibleSteps.length - 1, 0));
+    allSteps.forEach(step => step.classList.remove("active"));
+    visibleSteps[currentStepIndex]?.classList.add("active");
     const number = currentStepIndex + 1;
-    progressLabel.textContent = `سؤال ${number} از ${steps.length}`;
-    progressBar.style.width = `${(number / steps.length) * 100}%`;
+    progressLabel.textContent = `سؤال ${number} از ${visibleSteps.length}`;
+    progressBar.style.width = `${(number / visibleSteps.length) * 100}%`;
     previousButton?.classList.toggle("hidden", currentStepIndex === 0);
-    nextButton?.classList.toggle("hidden", currentStepIndex === steps.length - 1);
-    submitButton?.classList.toggle("hidden", currentStepIndex !== steps.length - 1);
+    nextButton?.classList.toggle("hidden", currentStepIndex === visibleSteps.length - 1);
+    submitButton?.classList.toggle("hidden", currentStepIndex !== visibleSteps.length - 1);
     formError.textContent = "";
     window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 function validateCurrentStep() {
-    const currentStep = steps[currentStepIndex];
+    const currentStep = getVisibleSteps()[currentStepIndex];
     const requiredGroups = new Set(
         Array.from(currentStep.querySelectorAll('input[type="radio"][required]')).map(input => input.name)
     );
@@ -172,7 +195,7 @@ async function submitSurvey(event) {
         air_movement: numericValue(formData, "air_movement"),
         hvac_mode: null,
         hvac_speed: null,
-        air_source: formData.get("air_source"),
+        air_source: formData.get("air_movement") === "0" ? "none" : formData.get("air_source"),
         overall_comfort: numericValue(formData, "overall_comfort"),
         answer_client_submitted_at: getTehranTimestamp(),
         answer_client_submitted_at_utc: new Date().toISOString(),
@@ -201,8 +224,19 @@ function startQuestionnaire() { currentStepIndex = 0; showView("survey"); update
 safeOn(document.getElementById("claim-button"), "click", startQuestionnaire);
 safeOn(document.getElementById("decline-button"), "click", () => showView("success"));
 safeOn(document.getElementById("unsure-button"), "click", () => showView("success"));
-safeOn(previousButton, "click", () => { if (currentStepIndex > 0) { currentStepIndex--; updateWizard(); } });
-safeOn(nextButton, "click", () => { if (validateCurrentStep() && currentStepIndex < steps.length - 1) { currentStepIndex++; updateWizard(); } });
+safeOn(previousButton, "click", () => {
+    if (currentStepIndex > 0) {
+        currentStepIndex--;
+        updateWizard();
+    }
+});
+safeOn(nextButton, "click", () => {
+    const visibleSteps = getVisibleSteps();
+    if (validateCurrentStep() && currentStepIndex < visibleSteps.length - 1) {
+        currentStepIndex++;
+        updateWizard();
+    }
+});
 safeOn(document.getElementById("survey-form"), "submit", submitSurvey);
 
 updateOtherField();
