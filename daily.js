@@ -126,24 +126,46 @@ function initializeOtherFields() {
     });
 }
 
-function updateWizard() {
+function activeStepElement() {
+    return allSteps.find(function (step) {
+        return step.classList.contains("active");
+    }) || null;
+}
+
+function updateWizard(previousStepElement) {
     updateConditionalAnswers();
     const steps = visibleSteps();
 
-    if (currentStepIndex >= steps.length) currentStepIndex = steps.length - 1;
+    if (previousStepElement) {
+        const preservedIndex = steps.indexOf(previousStepElement);
+        if (preservedIndex !== -1) currentStepIndex = preservedIndex;
+    }
+
+    if (currentStepIndex >= steps.length) {
+        currentStepIndex = Math.max(0, steps.length - 1);
+    }
 
     allSteps.forEach(function (step) {
         step.classList.remove("active");
     });
-    steps[currentStepIndex].classList.add("active");
+
+    const activeStep = steps[currentStepIndex];
+    if (!activeStep) {
+        formError.textContent = "خطا در نمایش مرحله پرسشنامه.";
+        return;
+    }
+
+    activeStep.classList.add("active");
 
     const number = currentStepIndex + 1;
     progressLabel.textContent = `سؤال ${number} از ${steps.length}`;
     progressBar.style.width = `${(number / steps.length) * 100}%`;
 
+    const isLastVisibleStep = currentStepIndex === steps.length - 1;
     previousButton.classList.toggle("hidden", currentStepIndex === 0);
-    nextButton.classList.toggle("hidden", currentStepIndex === steps.length - 1);
-    submitButton.classList.toggle("hidden", currentStepIndex !== steps.length - 1);
+    nextButton.classList.toggle("hidden", isLastVisibleStep);
+    submitButton.classList.toggle("hidden", !isLastVisibleStep);
+
     formError.textContent = "";
     window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -246,6 +268,25 @@ function numericValue(formData, key) {
 
 async function submitSurvey(event) {
     event.preventDefault();
+
+    const activeStep = activeStepElement();
+    const windowAnswer = selectedValue("window_closed_since_previous");
+
+    if (activeStep && activeStep.dataset.question === "13" && windowAnswer === "yes") {
+        updateConditionalAnswers();
+        const steps = visibleSteps();
+        const q14 = steps.findIndex(function (step) {
+            return step.dataset.question === "14";
+        });
+
+        if (q14 !== -1) {
+            currentStepIndex = q14;
+            updateWizard();
+            formError.textContent = "لطفاً دلیل اصلی بستن پنجره را انتخاب کنید.";
+        }
+        return;
+    }
+
     if (!validateCurrentStep()) return;
 
     const formData = new FormData(event.currentTarget);
@@ -256,7 +297,7 @@ async function submitSurvey(event) {
         : null;
 
     const answers = {
-        questionnaire_version: "DAILY_SURVEY_V2_GRAPHIC",
+        questionnaire_version: "DAILY_SURVEY_V5_LARGE_ICONS_Q13_Q14_FIXED",
         survey_slot: loadedSurvey?.survey_slot || null,
         survey_date: loadedSurvey?.survey_date || null,
 
@@ -290,6 +331,21 @@ async function submitSurvey(event) {
         answer_client_submitted_at_utc: new Date().toISOString(),
         answer_client_timezone: "Asia/Tehran"
     };
+
+    if (closedWindow === "yes" && !closingReason) {
+        const steps = visibleSteps();
+        const q14 = steps.findIndex(function (step) {
+            return step.dataset.question === "14";
+        });
+
+        if (q14 !== -1) {
+            currentStepIndex = q14;
+            updateWizard();
+        }
+
+        formError.textContent = "لطفاً دلیل اصلی بستن پنجره را انتخاب کنید.";
+        return;
+    }
 
     setBusy(submitButton, true);
 
@@ -339,7 +395,9 @@ safeAddEventListener(nextButton, "click", function () {
 document.querySelectorAll('input[name="air_movement"], input[name="window_closed_since_previous"]')
     .forEach(function (input) {
         input.addEventListener("change", function () {
+            const previousStep = activeStepElement();
             updateConditionalAnswers();
+            updateWizard(previousStep);
         });
     });
 

@@ -196,3 +196,130 @@ footer{margin-top:27px;padding-top:16px;border-top:1px solid var(--border);color
         height: 64px;
     }
 }
+
+
+/* FINAL OVERRIDES */
+.visual-option > span{
+  min-height:238px;
+  padding:18px 14px 16px;
+  gap:16px;
+}
+.visual-option .custom-option-icon{
+  width:100%!important;
+  min-height:150px!important;
+  display:grid!important;
+  place-items:center;
+  overflow:visible!important;
+  background:transparent!important;
+}
+.visual-option .custom-option-icon img{
+  width:148px!important;
+  height:148px!important;
+  max-width:100%;
+  object-fit:contain;
+}
+.visual-option em{margin-top:4px;line-height:1.65}
+.icon-list label span{
+  grid-template-columns:132px minmax(0,1fr) 28px!important;
+  column-gap:28px!important;
+  min-height:132px!important;
+  padding:14px 18px!important;
+}
+.icon-list .custom-option-icon{
+  width:126px!important;
+  min-height:112px!important;
+}
+.icon-list .custom-option-icon img{
+  width:116px!important;
+  height:116px!important;
+  object-fit:contain;
+}
+.icon-list label em{
+  padding-inline-start:6px;
+  line-height:1.75;
+}
+.icon-list label em strong{font-size:17px}
+.icon-list label em small{
+  margin-top:4px;
+  font-size:13px;
+  line-height:1.65;
+}
+.survey-step[data-question="13"] .visual-grid.two{
+  max-width:620px;
+  margin-inline:auto;
+  gap:18px;
+}
+.survey-step[data-question="13"] .visual-option > span{min-height:255px}
+.survey-step[data-question="14"] .icon-list label span{
+  grid-template-columns:132px minmax(0,1fr) 28px!important;
+  column-gap:30px!important;
+}
+.room-grid .visual-option .custom-option-icon img{
+  width:138px!important;
+  height:138px!important;
+}
+@media (min-width:651px){
+  .visual-grid.four .visual-option > span{min-height:220px;padding-inline:8px}
+  .visual-grid.four .custom-option-icon img{
+    width:128px!important;
+    height:128px!important;
+  }
+}
+@media (max-width:650px){
+  .survey-shell{padding-inline:7px}
+  .survey-card{padding-inline:10px}
+  .visual-grid.three,.visual-grid.four{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+  .visual-option > span{
+    min-height:205px;
+    padding:13px 7px 12px;
+    gap:12px;
+  }
+  .visual-option .custom-option-icon{min-height:124px!important}
+  .visual-option .custom-option-icon img{
+    width:122px!important;
+    height:122px!important;
+  }
+  .room-grid .visual-option .custom-option-icon img{
+    width:118px!important;
+    height:118px!important;
+  }
+  .icon-list label span{
+    grid-template-columns:102px minmax(0,1fr) 24px!important;
+    column-gap:18px!important;
+    min-height:112px!important;
+    padding:11px 10px!important;
+  }
+  .icon-list .custom-option-icon{
+    width:96px!important;
+    min-height:94px!important;
+  }
+  .icon-list .custom-option-icon img{
+    width:90px!important;
+    height:90px!important;
+  }
+  .survey-step[data-question="13"] .visual-grid.two{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:10px;
+  }
+  .survey-step[data-question="13"] .visual-option > span{min-height:218px}
+}
+@media (max-width:390px){
+  .visual-option .custom-option-icon img{
+    width:108px!important;
+    height:108px!important;
+  }
+  .icon-list label span{
+    grid-template-columns:88px minmax(0,1fr) 22px!important;
+    column-gap:13px!important;
+  }
+  .icon-list .custom-option-icon{
+    width:84px!important;
+    min-height:84px!important;
+  }
+  .icon-list .custom-option-icon img{
+    width:80px!important;
+    height:80px!important;
+  }
+}
