@@ -253,3 +253,17 @@ footer{margin-top:27px;padding-top:16px;border-top:1px solid var(--border);color
   .room-grid .custom-option-icon img{width:78px;height:78px}
   .visual-option em{font-size:12px}
 }
+
+
+/* Final Q13 correction: only Yes / No */
+.survey-step[data-question="13"] .visual-grid.two{
+    max-width:620px;
+    margin-inline:auto;
+    gap:16px;
+}
+@media(max-width:650px){
+    .survey-step[data-question="13"] .visual-grid.two{
+        grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+        gap:8px;
+    }
+}

@@ -325,7 +325,7 @@ async function submitSurvey(event) {
         : null;
 
     const answers = {
-        questionnaire_version: "DAILY_SURVEY_V5_LARGE_ICONS_Q13_Q14_FIXED",
+        questionnaire_version: "DAILY_SURVEY_V6_MOBILE_UNIFIED_Q13_FINAL",
         survey_slot: loadedSurvey?.survey_slot || null,
         survey_date: loadedSurvey?.survey_date || null,
 
