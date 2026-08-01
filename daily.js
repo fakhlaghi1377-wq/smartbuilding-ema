@@ -8,10 +8,10 @@ const views = {
     intro: document.getElementById("intro-view"),
     survey: document.getElementById("survey-form"),
     success: document.getElementById("success-view"),
-    closed: document.getElementById("closed-view"),
+    closed: document.getElementById("closed-view")
 };
 
-const steps = Array.from(document.querySelectorAll(".survey-step"));
+const allSteps = Array.from(document.querySelectorAll(".survey-step"));
 const previousButton = document.getElementById("previous-button");
 const nextButton = document.getElementById("next-button");
 const submitButton = document.getElementById("submit-button");
@@ -23,20 +23,15 @@ let currentStepIndex = 0;
 let loadedSurvey = null;
 
 function showView(name) {
-    Object.values(views).forEach((view) => {
-        if (view) {
-            view.classList.remove("active");
-        }
+    Object.values(views).forEach(function (view) {
+        if (view) view.classList.remove("active");
     });
-
-    if (views[name]) {
-        views[name].classList.add("active");
-    }
+    if (views[name]) views[name].classList.add("active");
 }
 
 function setBusy(button, busy) {
+    if (!button.dataset.originalText) button.dataset.originalText = button.textContent;
     button.disabled = busy;
-    button.dataset.originalText ||= button.textContent;
     button.textContent = busy ? "در حال ثبت..." : button.dataset.originalText;
 }
 
@@ -47,14 +42,10 @@ function showError(message) {
 
 function formatDateTime(value) {
     if (!value) return "زمان نامشخص";
-    const date = new Date(value);
-    return date.toLocaleString("fa-IR", {
+    return new Date(value).toLocaleString("fa-IR", {
         timeZone: "Asia/Tehran",
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
+        year: "numeric", month: "2-digit", day: "2-digit",
+        hour: "2-digit", minute: "2-digit"
     });
 }
 
@@ -62,117 +53,93 @@ function slotLabel(slot) {
     const labels = {
         morning: "نوبت صبح؛ ساعت ۹",
         afternoon: "نوبت بعدازظهر؛ ساعت ۱۴",
-        evening: "نوبت شب؛ ساعت ۲۰",
+        evening: "نوبت شب؛ ساعت ۲۰"
     };
     return labels[slot] || "پرسشنامه روزانه";
 }
 
+function selectedValue(name) {
+    const input = document.querySelector(`input[name="${name}"]:checked`);
+    return input ? input.value : null;
+}
+
+function visibleSteps() {
+    return allSteps.filter(function (step) {
+        if (step.dataset.condition === "air-source") {
+            return selectedValue("air_movement") === "1";
+        }
+        if (step.dataset.condition === "closing-reason") {
+            return selectedValue("window_closed_since_previous") === "yes";
+        }
+        return true;
+    });
+}
+
+function clearRadioGroup(name) {
+    document.querySelectorAll(`input[name="${name}"]`).forEach(function (input) {
+        input.checked = false;
+    });
+}
+
+function updateConditionalAnswers() {
+    const feelsAir = selectedValue("air_movement") === "1";
+    const airflowInputs = Array.from(document.querySelectorAll('input[name="airflow_source"]'));
+    airflowInputs.forEach(function (input, index) {
+        input.required = feelsAir && index === 0;
+    });
+    if (!feelsAir) clearRadioGroup("airflow_source");
+
+    const closedByUser = selectedValue("window_closed_since_previous") === "yes";
+    const reasonInputs = Array.from(document.querySelectorAll('input[name="window_closing_reason"]'));
+    reasonInputs.forEach(function (input, index) {
+        input.required = closedByUser && index === 0;
+    });
+    if (!closedByUser) {
+        clearRadioGroup("window_closing_reason");
+        document.getElementById("window_closing_reason_other").value = "";
+        document.getElementById("window-closing-reason-other-wrap").classList.add("hidden");
+    }
+}
+
 function updateOtherField(groupName, wrapperId, inputName) {
-    const selected = document.querySelector(`input[name="${groupName}"]:checked`);
     const wrapper = document.getElementById(wrapperId);
     const input = document.querySelector(`[name="${inputName}"]`);
     if (!wrapper || !input) return;
-
-    const shouldShow = selected?.value === "other";
-    wrapper.classList.toggle("hidden", !shouldShow);
-    input.required = shouldShow;
-    if (!shouldShow) input.value = "";
+    const show = selectedValue(groupName) === "other";
+    wrapper.classList.toggle("hidden", !show);
+    input.required = show;
+    if (!show) input.value = "";
 }
 
 function initializeOtherFields() {
-    const configs = [
+    [
         ["current_room", "current-room-other-wrap", "current_room_other"],
-        ["airflow_source", "airflow-source-other-wrap", "airflow_source_other"],
-        ["window_closing_reason", "window-closing-reason-other-wrap", "window_closing_reason_other"],
-    ];
-
-    configs.forEach(([groupName, wrapperId, inputName]) => {
-        document.querySelectorAll(`input[name="${groupName}"]`).forEach((input) => {
-            input.addEventListener("change", () =>
-                updateOtherField(groupName, wrapperId, inputName)
-            );
+        ["window_closing_reason", "window-closing-reason-other-wrap", "window_closing_reason_other"]
+    ].forEach(function (config) {
+        const groupName = config[0], wrapperId = config[1], inputName = config[2];
+        document.querySelectorAll(`input[name="${groupName}"]`).forEach(function (input) {
+            input.addEventListener("change", function () {
+                updateOtherField(groupName, wrapperId, inputName);
+            });
         });
         updateOtherField(groupName, wrapperId, inputName);
     });
 }
 
-function updateOdorDescription() {
-    const selected = document.querySelector('input[name="odor_level"]:checked');
-    const wrapper = document.getElementById("odor-description-wrap");
-    const shouldShow = selected && selected.value !== "none";
-    wrapper.classList.toggle("hidden", !shouldShow);
-    if (!shouldShow) {
-        document.getElementById("odor_description").value = "";
-    }
-}
-
-function initializeOdorField() {
-    document.querySelectorAll('input[name="odor_level"]').forEach((input) => {
-        input.addEventListener("change", updateOdorDescription);
-    });
-    updateOdorDescription();
-}
-
-function updateHvacSpeedField() {
-    const selectedMode = document.querySelector('input[name="hvac_mode"]:checked');
-    const speedWrapper = document.getElementById("hvac-speed-wrap");
-    const speedInputs = Array.from(document.querySelectorAll('input[name="hvac_speed"]'));
-    const needsSpeed = ["fan", "cooling", "heating"].includes(selectedMode?.value);
-
-    speedWrapper.classList.toggle("hidden", !needsSpeed);
-    speedInputs.forEach((input, index) => {
-        input.required = needsSpeed && index === 0;
-        if (!needsSpeed) input.checked = false;
-    });
-}
-
-function initializeHvacFields() {
-    document.querySelectorAll('input[name="hvac_mode"]').forEach((input) => {
-        input.addEventListener("change", updateHvacSpeedField);
-    });
-    updateHvacSpeedField();
-}
-
-function updateClosingReasonField() {
-    const selected = document.querySelector(
-        'input[name="window_closed_since_previous"]:checked'
-    );
-    const wrapper = document.getElementById("closing-reason-wrap");
-    const reasonInputs = Array.from(
-        document.querySelectorAll('input[name="window_closing_reason"]')
-    );
-    const needsReason = selected?.value === "yes";
-
-    wrapper.classList.toggle("hidden", !needsReason);
-    reasonInputs.forEach((input, index) => {
-        input.required = needsReason && index === 0;
-        if (!needsReason) input.checked = false;
-    });
-
-    if (!needsReason) {
-        document.getElementById("window_closing_reason_other").value = "";
-        document.getElementById("window-closing-reason-other-wrap")
-            .classList.add("hidden");
-    }
-}
-
-function initializeClosingReasonField() {
-    document.querySelectorAll(
-        'input[name="window_closed_since_previous"]'
-    ).forEach((input) => {
-        input.addEventListener("change", updateClosingReasonField);
-    });
-    updateClosingReasonField();
-}
-
 function updateWizard() {
-    steps.forEach((step, index) => {
-        step.classList.toggle("active", index === currentStepIndex);
-    });
+    updateConditionalAnswers();
+    const steps = visibleSteps();
 
-    const stepNumber = currentStepIndex + 1;
-    progressLabel.textContent = `سؤال ${stepNumber} از ${steps.length}`;
-    progressBar.style.width = `${(stepNumber / steps.length) * 100}%`;
+    if (currentStepIndex >= steps.length) currentStepIndex = steps.length - 1;
+
+    allSteps.forEach(function (step) {
+        step.classList.remove("active");
+    });
+    steps[currentStepIndex].classList.add("active");
+
+    const number = currentStepIndex + 1;
+    progressLabel.textContent = `سؤال ${number} از ${steps.length}`;
+    progressBar.style.width = `${(number / steps.length) * 100}%`;
 
     previousButton.classList.toggle("hidden", currentStepIndex === 0);
     nextButton.classList.toggle("hidden", currentStepIndex === steps.length - 1);
@@ -182,32 +149,28 @@ function updateWizard() {
 }
 
 function validateCurrentStep() {
-    const currentStep = steps[currentStepIndex];
+    const step = visibleSteps()[currentStepIndex];
+
     const requiredGroups = new Set(
-        Array.from(currentStep.querySelectorAll('input[type="radio"][required]'))
-            .map((input) => input.name)
+        Array.from(step.querySelectorAll('input[type="radio"][required]'))
+            .map(function (input) { return input.name; })
     );
 
     for (const groupName of requiredGroups) {
-        const selected = currentStep.querySelector(`input[name="${groupName}"]:checked`);
-        if (!selected) {
+        if (!step.querySelector(`input[name="${groupName}"]:checked`)) {
             formError.textContent = "لطفاً یک گزینه انتخاب کنید.";
             return false;
         }
     }
 
-    const requiredTextFields = currentStep.querySelectorAll(
-        'textarea[required], input[type="text"][required]'
-    );
-
-    for (const field of requiredTextFields) {
+    const textFields = step.querySelectorAll('textarea[required], input[type="text"][required]');
+    for (const field of textFields) {
         if (!field.value.trim()) {
             formError.textContent = "لطفاً گزینه «سایر» را توضیح دهید.";
             field.focus();
             return false;
         }
     }
-
     formError.textContent = "";
     return true;
 }
@@ -217,38 +180,40 @@ async function loadSurvey() {
         showError("توکن پرسشنامه در لینک وجود ندارد.");
         return;
     }
-
-    let survey;
-    try {
-        const loaded = await window.CloudSurveyApi.load(accessToken, eventId);
-        survey = loaded.event;
-    } catch (error) {
-        console.error(error);
-        showError("پرسشنامه هنوز روی این گوشی ذخیره نشده و ارتباط اینترنتی برقرار نیست.");
+    if (!window.CloudSurveyApi || typeof window.CloudSurveyApi.load !== "function") {
+        showError("فایل cloud-survey.js بارگذاری نشده است.");
         return;
     }
 
-    if (!survey) {
+    try {
+        const loaded = await window.CloudSurveyApi.load(accessToken, eventId);
+        loadedSurvey = loaded.event;
+    } catch (error) {
+        console.error(error);
+        showError("پرسشنامه بارگذاری نشد. اتصال اینترنت را بررسی کنید.");
+        return;
+    }
+
+    if (!loadedSurvey) {
         showError("این لینک معتبر نیست یا پرسشنامه منقضی شده است.");
         return;
     }
 
-    loadedSurvey = survey;
     document.getElementById("scheduled-time").textContent =
-        formatDateTime(survey.scheduled_for || survey.created_at);
+        formatDateTime(loadedSurvey.scheduled_for || loadedSurvey.created_at);
     document.getElementById("occupant-code").textContent =
-        `کد ناشناس شما: ${survey.occupant_code || "ناشناس"}`;
+        `کد ناشناس شما: ${loadedSurvey.occupant_code || "ناشناس"}`;
 
     const badge = document.getElementById("survey-slot-badge");
-    badge.textContent = slotLabel(survey.survey_slot);
+    badge.textContent = slotLabel(loadedSurvey.survey_slot);
     badge.classList.remove("hidden");
 
-    if (survey.status === "COMPLETED") {
+    if (loadedSurvey.status === "COMPLETED") {
         showView("success");
         return;
     }
 
-    if (["EXPIRED", "UNANSWERED", "CLOSED"].includes(survey.status)) {
+    if (["EXPIRED", "UNANSWERED", "CLOSED"].includes(loadedSurvey.status)) {
         showView("closed");
         return;
     }
@@ -260,18 +225,14 @@ function getTehranTimestamp() {
     const now = new Date();
     const parts = new Intl.DateTimeFormat("en-CA", {
         timeZone: "Asia/Tehran",
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        hourCycle: "h23",
+        year: "numeric", month: "2-digit", day: "2-digit",
+        hour: "2-digit", minute: "2-digit", second: "2-digit",
+        hourCycle: "h23"
     }).formatToParts(now);
 
     const values = Object.fromEntries(
-        parts.filter((part) => part.type !== "literal")
-            .map((part) => [part.type, part.value])
+        parts.filter(function (part) { return part.type !== "literal"; })
+            .map(function (part) { return [part.type, part.value]; })
     );
 
     return `${values.year}-${values.month}-${values.day}` +
@@ -288,14 +249,14 @@ async function submitSurvey(event) {
     if (!validateCurrentStep()) return;
 
     const formData = new FormData(event.currentTarget);
-    const hvacMode = formData.get("hvac_mode");
+    const feelsAir = formData.get("air_movement") === "1";
     const closedWindow = formData.get("window_closed_since_previous");
     const closingReason = closedWindow === "yes"
         ? formData.get("window_closing_reason")
         : null;
 
     const answers = {
-        questionnaire_version: "DAILY_SURVEY_V1",
+        questionnaire_version: "DAILY_SURVEY_V2_GRAPHIC",
         survey_slot: loadedSurvey?.survey_slot || null,
         survey_date: loadedSurvey?.survey_date || null,
 
@@ -310,31 +271,12 @@ async function submitSurvey(event) {
         thermal_preference: numericValue(formData, "thermal_preference"),
         temperature_satisfaction: numericValue(formData, "temperature_satisfaction"),
         air_freshness: numericValue(formData, "air_freshness"),
-        air_movement: numericValue(formData, "air_movement"),
-        humidity_perception: numericValue(formData, "humidity_perception"),
 
-        odor_level: formData.get("odor_level"),
-        odor_description: formData.get("odor_level") !== "none"
-            ? String(formData.get("odor_description") || "").trim() || null
-            : null,
+        air_movement: numericValue(formData, "air_movement"),
+        airflow_source: feelsAir ? formData.get("airflow_source") : "none",
+        airflow_source_other: null,
 
         light_level: numericValue(formData, "light_level"),
-        glare_level: numericValue(formData, "glare_level"),
-        noise_level: numericValue(formData, "noise_level"),
-
-        hvac_mode: hvacMode,
-        hvac_speed: ["fan", "cooling", "heating"].includes(hvacMode)
-            ? formData.get("hvac_speed")
-            : null,
-        hvac_status: ["fan", "cooling", "heating"].includes(hvacMode)
-            ? `${hvacMode}_${formData.get("hvac_speed")}`
-            : hvacMode,
-
-        airflow_source: formData.get("airflow_source"),
-        airflow_source_other: formData.get("airflow_source") === "other"
-            ? String(formData.get("airflow_source_other") || "").trim()
-            : null,
-
         sleepiness: numericValue(formData, "sleepiness"),
         overall_comfort: numericValue(formData, "overall_comfort"),
 
@@ -346,7 +288,7 @@ async function submitSurvey(event) {
 
         answer_client_submitted_at: getTehranTimestamp(),
         answer_client_submitted_at_utc: new Date().toISOString(),
-        answer_client_timezone: "Asia/Tehran",
+        answer_client_timezone: "Asia/Tehran"
     };
 
     setBusy(submitButton, true);
@@ -356,52 +298,53 @@ async function submitSurvey(event) {
         setBusy(submitButton, false);
         if (submitted.queued) {
             document.querySelector("#success-view p").textContent =
-                "پاسخ روی گوشی ذخیره شد و به‌محض اتصال اینترنت خودکار ارسال می‌شود.";
+                "پاسخ روی گوشی ذخیره شد و پس از اتصال اینترنت خودکار ارسال می‌شود.";
         }
         showView("success");
     } catch (error) {
         console.error(error);
         setBusy(submitButton, false);
         formError.textContent =
-            error?.data?.message || "این پرسشنامه بسته یا منقضی شده است.";
+            (error && error.data && error.data.message) ||
+            "ثبت پاسخ انجام نشد. دوباره تلاش کنید.";
     }
 }
 
-function safeAddEventListener(element, event, callback) {
-    if (element) {
-        element.addEventListener(event, callback);
-    }
+function safeAddEventListener(element, eventName, callback) {
+    if (element) element.addEventListener(eventName, callback);
 }
 
-const startButton = document.getElementById("start-button");
-
-safeAddEventListener(startButton, "click", () => {
+safeAddEventListener(document.getElementById("start-button"), "click", function () {
     currentStepIndex = 0;
     showView("survey");
     updateWizard();
 });
 
-safeAddEventListener(previousButton, "click", () => {
+safeAddEventListener(previousButton, "click", function () {
     if (currentStepIndex > 0) {
         currentStepIndex -= 1;
         updateWizard();
     }
 });
 
-safeAddEventListener(nextButton, "click", () => {
+safeAddEventListener(nextButton, "click", function () {
     if (!validateCurrentStep()) return;
+    const steps = visibleSteps();
     if (currentStepIndex < steps.length - 1) {
         currentStepIndex += 1;
         updateWizard();
     }
 });
 
-const surveyForm = document.getElementById("survey-form");
+document.querySelectorAll('input[name="air_movement"], input[name="window_closed_since_previous"]')
+    .forEach(function (input) {
+        input.addEventListener("change", function () {
+            updateConditionalAnswers();
+        });
+    });
 
-safeAddEventListener(surveyForm, "submit", submitSurvey);
+safeAddEventListener(document.getElementById("survey-form"), "submit", submitSurvey);
 
 initializeOtherFields();
-initializeOdorField();
-initializeHvacFields();
-initializeClosingReasonField();
+updateConditionalAnswers();
 loadSurvey();
