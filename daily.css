@@ -323,3 +323,62 @@ footer{margin-top:27px;padding-top:16px;border-top:1px solid var(--border);color
     height:80px!important;
   }
 }
+
+
+/* ===== Final typography update ===== */
+
+/* Intro image much larger */
+.hero-window{
+    width:170px !important;
+    height:170px !important;
+    margin:26px auto 14px !important;
+    border-radius:34px !important;
+}
+.hero-window img{
+    object-fit:contain !important;
+}
+
+/* All option labels larger & bolder */
+.visual-option em{
+    font-size:20px !important;
+    font-weight:900 !important;
+    line-height:1.7 !important;
+}
+.visual-option em strong{
+    font-size:22px !important;
+    font-weight:900 !important;
+}
+.visual-option em small{
+    display:block;
+    margin-top:6px;
+    font-size:15px !important;
+    font-weight:700 !important;
+    color:#556;
+}
+.icon-list label em{
+    font-size:20px !important;
+    font-weight:900 !important;
+}
+.icon-list label em strong{
+    font-size:22px !important;
+    font-weight:900 !important;
+}
+.icon-list label em small{
+    font-size:15px !important;
+    font-weight:700 !important;
+}
+
+@media (max-width:650px){
+    .hero-window{
+        width:145px !important;
+        height:145px !important;
+    }
+    .visual-option em,
+    .icon-list label em{
+        font-size:17px !important;
+    }
+    .visual-option em strong,
+    .icon-list label em strong{
+        font-size:19px !important;
+    }
+}
