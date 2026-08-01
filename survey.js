@@ -2,13 +2,40 @@ const params=new URLSearchParams(location.search),eventId=params.get("event"),ac
 const views={loading:document.getElementById("loading-view"),error:document.getElementById("error-view"),intro:document.getElementById("intro-view"),survey:document.getElementById("survey-form"),success:document.getElementById("success-view"),closed:document.getElementById("closed-view")};
 const form=document.getElementById("survey-form"),previousButton=document.getElementById("previous-button"),nextButton=document.getElementById("next-button"),submitButton=document.getElementById("submit-button"),progressLabel=document.getElementById("progress-label"),progressBar=document.getElementById("progress-bar"),formError=document.getElementById("form-error"),airSourceStep=document.getElementById("air-source-step");
 let currentStepIndex=0,loadedSurvey=null;
+
+const imagePreloadCache = new Set();
+
+function preloadImagesIn(element) {
+    if (!element) return;
+
+    element.querySelectorAll("img").forEach(function (img) {
+        const source = img.currentSrc || img.getAttribute("src");
+        if (!source) return;
+
+        img.loading = "eager";
+        img.decoding = "async";
+
+        if (imagePreloadCache.has(source)) return;
+        imagePreloadCache.add(source);
+
+        const preloadImage = new Image();
+        preloadImage.decoding = "async";
+        preloadImage.src = source;
+    });
+}
+
+function preloadCurrentAndNextSteps(steps, index) {
+    preloadImagesIn(steps[index]);
+    preloadImagesIn(steps[index + 1]);
+}
+
 function showView(name){Object.values(views).forEach(v=>v?.classList.remove("active"));views[name]?.classList.add("active")}
 function showError(message){document.getElementById("error-message").textContent=message;showView("error")}
 function setBusy(button,busy){button.disabled=busy;button.dataset.originalText||=button.textContent;button.textContent=busy?"در حال ثبت...":button.dataset.originalText}
 function visibleSteps(){return [...document.querySelectorAll(".survey-step:not(.conditional-hidden)")]}
 function hasAirflow(){return document.querySelector('input[name="air_movement"]:checked')?.value==="1"}
 function syncAirSourceStep(){const show=hasAirflow();airSourceStep.classList.toggle("conditional-hidden",!show);airSourceStep.classList.toggle("hidden",!show);const inputs=[...airSourceStep.querySelectorAll('input[name="air_source"]')];inputs.forEach((input,index)=>{input.required=show&&index===0;if(!show)input.checked=false});const steps=visibleSteps();if(!steps.includes(document.querySelector(".survey-step.active")))currentStepIndex=Math.min(currentStepIndex,steps.length-1)}
-function updateWizard(){syncAirSourceStep();const steps=visibleSteps();steps.forEach((step,index)=>step.classList.toggle("active",index===currentStepIndex));document.querySelectorAll(".survey-step.conditional-hidden").forEach(s=>s.classList.remove("active"));const step=steps[currentStepIndex],number=step?.dataset.number||currentStepIndex+1;progressLabel.textContent=`سؤال ${number} از ۸`;progressBar.style.width=`${(Number(number)/8)*100}%`;previousButton.classList.toggle("hidden",currentStepIndex===0);nextButton.classList.toggle("hidden",currentStepIndex===steps.length-1);submitButton.classList.toggle("hidden",currentStepIndex!==steps.length-1);formError.textContent="";scrollTo({top:0,behavior:"smooth"})}
+function updateWizard(){syncAirSourceStep();const steps=visibleSteps();steps.forEach((step,index)=>step.classList.toggle("active",index===currentStepIndex));document.querySelectorAll(".survey-step.conditional-hidden").forEach(s=>s.classList.remove("active"));const step=steps[currentStepIndex],number=step?.dataset.number||currentStepIndex+1;progressLabel.textContent=`سؤال ${number} از ۸`;progressBar.style.width=`${(Number(number)/8)*100}%`;previousButton.classList.toggle("hidden",currentStepIndex===0);nextButton.classList.toggle("hidden",currentStepIndex===steps.length-1);submitButton.classList.toggle("hidden",currentStepIndex!==steps.length-1);preloadCurrentAndNextSteps(steps,currentStepIndex);formError.textContent="";scrollTo({top:0,behavior:"smooth"})}
 function validateCurrentStep(){const step=visibleSteps()[currentStepIndex];if(!step)return false;const requiredGroups=new Set([...step.querySelectorAll('input[type="radio"][required]')].map(i=>i.name));for(const name of requiredGroups){if(!step.querySelector(`input[name="${name}"]:checked`)){formError.textContent="لطفاً یک گزینه انتخاب کنید.";return false}}for(const field of step.querySelectorAll('textarea[required],input[type="text"][required]')){if(!field.value.trim()){formError.textContent="لطفاً گزینه «سایر» را توضیح دهید.";field.focus();return false}}formError.textContent="";return true}
 function updateOther(){const other=document.querySelector('input[name="opening_reason"]:checked')?.value==="other",wrap=document.getElementById("opening-reason-other-wrap"),field=document.getElementById("opening_reason_other");wrap.classList.toggle("hidden",!other);field.required=other;if(!other)field.value=""}
 function formatDateTime(value){if(!value)return"زمان نامشخص";return new Date(value).toLocaleString("fa-IR",{timeZone:"Asia/Tehran",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"})}
@@ -18,4 +45,4 @@ function numericValue(data,key){const value=data.get(key);return value===null||v
 async function submitSurvey(event){event.preventDefault();if(!validateCurrentStep())return;const data=new FormData(form),airflow=data.get("air_movement")==="1",answers={questionnaire_version:loadedSurvey?.questionnaire_version||"EMA_WINDOW_OPEN_PROFESSIONAL_ICONS_V2",opening_reason:data.get("opening_reason"),opening_reason_other:data.get("opening_reason")==="other"?String(data.get("opening_reason_other")||"").trim():null,activity:data.get("activity"),activity_other:null,thermal_sensation:numericValue(data,"thermal_sensation"),thermal_preference:numericValue(data,"thermal_preference"),air_freshness:numericValue(data,"air_freshness"),air_movement:numericValue(data,"air_movement"),hvac_mode:null,hvac_speed:null,air_source:airflow?data.get("air_source"):null,overall_comfort:numericValue(data,"overall_comfort"),answer_client_submitted_at:getTehranTimestamp(),answer_client_submitted_at_utc:new Date().toISOString(),answer_client_timezone:"Asia/Tehran"};setBusy(submitButton,true);try{const submitted=await window.CloudSurveyApi.submit(accessToken,eventId,answers);setBusy(submitButton,false);if(submitted.queued)document.querySelector("#success-view p").textContent="پاسخ روی گوشی ذخیره شد و به‌محض اتصال اینترنت خودکار ارسال می‌شود.";showView("success")}catch(error){console.error(error);setBusy(submitButton,false);formError.textContent=error?.data?.message||"این پرسشنامه بسته یا منقضی شده است."}}
 function on(id,event,fn){document.getElementById(id)?.addEventListener(event,fn)}
 function start(){currentStepIndex=0;showView("survey");updateWizard()}
-on("claim-button","click",start);on("decline-button","click",()=>showView("closed"));on("unsure-button","click",()=>showView("closed"));on("previous-button","click",()=>{if(currentStepIndex>0){currentStepIndex--;updateWizard()}});on("next-button","click",()=>{if(!validateCurrentStep())return;const stepsBefore=visibleSteps();if(currentStepIndex<stepsBefore.length-1){currentStepIndex++;updateWizard()}});form.addEventListener("submit",submitSurvey);document.querySelectorAll('input[name="opening_reason"]').forEach(i=>i.addEventListener("change",updateOther));document.querySelectorAll('input[name="air_movement"]').forEach(i=>i.addEventListener("change",updateWizard));updateOther();syncAirSourceStep();loadSurvey();
+on("claim-button","click",start);on("decline-button","click",()=>showView("closed"));on("unsure-button","click",()=>showView("closed"));on("previous-button","click",()=>{if(currentStepIndex>0){currentStepIndex--;updateWizard()}});on("next-button","click",()=>{if(!validateCurrentStep())return;const stepsBefore=visibleSteps();if(currentStepIndex<stepsBefore.length-1){currentStepIndex++;updateWizard()}});form.addEventListener("submit",submitSurvey);document.querySelectorAll('input[name="opening_reason"]').forEach(i=>i.addEventListener("change",updateOther));document.querySelectorAll('input[name="air_movement"]').forEach(i=>i.addEventListener("change",updateWizard));updateOther();syncAirSourceStep();preloadImagesIn(document.getElementById("intro-view"));loadSurvey();

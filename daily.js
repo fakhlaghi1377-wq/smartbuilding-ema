@@ -22,6 +22,33 @@ const formError = document.getElementById("form-error");
 let currentStepIndex = 0;
 let loadedSurvey = null;
 
+const imagePreloadCache = new Set();
+
+function preloadImagesIn(element) {
+    if (!element) return;
+
+    element.querySelectorAll("img").forEach(function (img) {
+        const source = img.currentSrc || img.getAttribute("src");
+        if (!source) return;
+
+        img.loading = "eager";
+        img.decoding = "async";
+
+        if (imagePreloadCache.has(source)) return;
+        imagePreloadCache.add(source);
+
+        const preloadImage = new Image();
+        preloadImage.decoding = "async";
+        preloadImage.src = source;
+    });
+}
+
+function preloadCurrentAndNextSteps(steps, index) {
+    preloadImagesIn(steps[index]);
+    preloadImagesIn(steps[index + 1]);
+}
+
+
 function showView(name) {
     Object.values(views).forEach(function (view) {
         if (view) view.classList.remove("active");
@@ -166,6 +193,7 @@ function updateWizard(previousStepElement) {
     nextButton.classList.toggle("hidden", isLastVisibleStep);
     submitButton.classList.toggle("hidden", !isLastVisibleStep);
 
+    preloadCurrentAndNextSteps(steps, currentStepIndex);
     formError.textContent = "";
     window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -405,4 +433,5 @@ safeAddEventListener(document.getElementById("survey-form"), "submit", submitSur
 
 initializeOtherFields();
 updateConditionalAnswers();
+preloadImagesIn(document.getElementById("intro-view"));
 loadSurvey();

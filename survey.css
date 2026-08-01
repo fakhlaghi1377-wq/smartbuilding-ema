@@ -74,3 +74,79 @@ footer{margin-top:27px;padding-top:16px;border-top:1px solid var(--line);color:v
  .tile-grid .professional-icon,.comfort-grid .professional-icon{width:122px!important;height:122px!important}.tile-grid .professional-icon img,.comfort-grid .professional-icon img{width:118px;height:118px}
  .comfort-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.wizard-actions{grid-template-columns:1fr 1fr}
 }
+
+
+/* ===== Unified compact mobile theme ===== */
+.survey-shell{width:min(100%,790px)}
+.survey-card{border-radius:26px}
+.brand-icon{width:58px;height:58px;flex-basis:58px;border-radius:19px}
+.intro-hero{width:170px;height:170px;margin:22px auto 10px;border-radius:28px;padding:6px}
+.claim-card{min-height:150px;border-radius:18px;gap:8px}
+.claim-card img{width:88px;height:88px}
+.survey-step{border:1px solid var(--line);border-radius:19px;padding:18px 13px 15px}
+.option-list label span,.card-list span{
+  grid-template-columns:92px minmax(0,1fr) 24px;
+  column-gap:18px;min-height:100px;padding:9px 14px;border-radius:15px
+}
+.professional-icon{width:86px!important;height:86px!important}
+.professional-icon img{width:82px;height:82px}
+.option-list em,.card-list em,.tile-grid em,.comfort-grid em{font-size:16px}
+.tile-grid span,.comfort-grid span{min-height:195px;padding:13px 7px;gap:10px}
+.tile-grid .professional-icon,.comfort-grid .professional-icon{width:112px!important;height:112px!important}
+.tile-grid .professional-icon img,.comfort-grid .professional-icon img{width:108px;height:108px}
+
+@media(max-width:650px){
+  body{background:#eef7f4}
+  .survey-shell{padding:7px 6px 24px}
+  .survey-card{padding:14px 10px;border-radius:19px}
+  .brand-row{padding-bottom:14px}
+  .brand-icon{width:48px;height:48px;flex-basis:48px;border-radius:15px}
+  .brand-row h1{font-size:17px}.brand-row p{font-size:12px}
+  .intro-hero{width:145px;height:145px;margin-top:16px;border-radius:24px}
+  .event-box{padding:12px;margin-top:12px}
+  h2{font-size:20px;margin-top:17px}
+  .claim-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:16px}
+  .claim-card{
+    min-height:116px;padding:8px 4px;flex-direction:column;gap:5px;
+    font-size:12px;line-height:1.55;border-radius:15px
+  }
+  .claim-card img{width:62px;height:62px}
+  .survey-step{padding:14px 8px 12px;border-radius:16px}
+  .survey-step:before{top:10px;right:10px;width:34px;height:34px;font-size:18px}
+  legend{min-height:40px;margin-bottom:12px;padding:0 42px 0 3px;font-size:16px}
+
+  .option-list label span,.card-list span{
+    grid-template-columns:70px minmax(0,1fr) 21px;
+    column-gap:11px;min-height:80px;padding:7px 8px;border-radius:13px
+  }
+  .professional-icon{width:66px!important;height:66px!important}
+  .professional-icon img{width:63px;height:63px}
+  .option-list em,.card-list em{font-size:14px;line-height:1.65}
+
+  .tile-grid.three,.comfort-grid{
+    grid-template-columns:repeat(3,minmax(0,1fr));gap:6px
+  }
+  .tile-grid.two{gap:8px}
+  .tile-grid span,.comfort-grid span{
+    min-height:145px;padding:8px 3px;gap:6px;border-radius:14px
+  }
+  .tile-grid .professional-icon,.comfort-grid .professional-icon{
+    width:78px!important;height:78px!important
+  }
+  .tile-grid .professional-icon img,.comfort-grid .professional-icon img{
+    width:75px;height:75px
+  }
+  .tile-grid em,.comfort-grid em{font-size:13px;line-height:1.5}
+  label i{width:19px;height:19px}
+  .button{min-height:48px;padding:10px;font-size:14px}
+}
+@media(max-width:380px){
+  .tile-grid .professional-icon,.comfort-grid .professional-icon{
+    width:68px!important;height:68px!important
+  }
+  .tile-grid .professional-icon img,.comfort-grid .professional-icon img{
+    width:65px;height:65px
+  }
+  .tile-grid span,.comfort-grid span{min-height:132px}
+  .tile-grid em,.comfort-grid em{font-size:12px}
+}
