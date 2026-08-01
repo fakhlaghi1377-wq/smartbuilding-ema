@@ -150,3 +150,312 @@ footer{margin-top:27px;padding-top:16px;border-top:1px solid var(--line);color:v
   .tile-grid span,.comfort-grid span{min-height:132px}
   .tile-grid em,.comfort-grid em{font-size:12px}
 }
+
+
+/* =========================================================
+   FINAL RESPONSIVE DESIGN SYSTEM
+   Shared visual language for EMA and Daily
+   ========================================================= */
+
+:root{
+  --ui-primary:#137f74;
+  --ui-primary-dark:#0d665e;
+  --ui-text:#17312d;
+  --ui-muted:#6a7f7b;
+  --ui-border:#d9e8e4;
+  --ui-surface:#ffffff;
+  --ui-page:#eef7f4;
+
+  --ui-page-pad:clamp(6px,2vw,18px);
+  --ui-card-pad:clamp(10px,3vw,24px);
+  --ui-card-radius:clamp(17px,3vw,26px);
+  --ui-option-radius:clamp(13px,2.4vw,19px);
+  --ui-gap:clamp(6px,1.8vw,13px);
+
+  --ui-title:clamp(17px,4.6vw,22px);
+  --ui-question:clamp(16px,4.2vw,20px);
+  --ui-option-text:clamp(12px,3.5vw,17px);
+  --ui-small-text:clamp(11px,2.8vw,14px);
+
+  --ui-radio:clamp(18px,5vw,23px);
+  --ui-button-h:clamp(47px,12vw,55px);
+}
+
+html{
+  -webkit-text-size-adjust:100%;
+  text-size-adjust:100%;
+}
+
+body{
+  overflow-x:hidden;
+  background:
+    radial-gradient(circle at 12% 5%,rgba(72,187,164,.15),transparent 28%),
+    radial-gradient(circle at 90% 0,rgba(255,184,77,.12),transparent 28%),
+    linear-gradient(180deg,#e9f6f3,#f7faf9 420px);
+}
+
+.survey-shell{
+  width:min(100%,790px)!important;
+  padding:var(--ui-page-pad)!important;
+  padding-bottom:clamp(24px,7vw,44px)!important;
+}
+
+.survey-card{
+  width:100%;
+  padding:var(--ui-card-pad)!important;
+  border:1px solid var(--ui-border)!important;
+  border-radius:var(--ui-card-radius)!important;
+  background:rgba(255,255,255,.97)!important;
+  box-shadow:0 14px 42px rgba(19,127,116,.12)!important;
+}
+
+.brand-row{
+  gap:clamp(10px,3vw,15px)!important;
+  padding-bottom:clamp(13px,3vw,19px)!important;
+}
+
+.brand-row h1,
+h1{
+  font-size:var(--ui-title)!important;
+  line-height:1.45!important;
+}
+
+.brand-row p,
+.helper-text{
+  font-size:var(--ui-small-text)!important;
+  line-height:1.75!important;
+}
+
+.progress-row{
+  margin-top:clamp(15px,4vw,22px)!important;
+  margin-bottom:8px!important;
+  font-size:clamp(11px,2.8vw,13px)!important;
+}
+
+.progress-track{
+  height:clamp(8px,2.2vw,10px)!important;
+  margin-bottom:clamp(15px,4vw,23px)!important;
+}
+
+.button{
+  min-height:var(--ui-button-h)!important;
+  padding:clamp(10px,2.8vw,13px) clamp(12px,3vw,18px)!important;
+  border-radius:clamp(13px,2.8vw,15px)!important;
+  font-size:clamp(13px,3.3vw,16px)!important;
+}
+
+.wizard-actions{
+  gap:clamp(7px,2vw,10px)!important;
+}
+
+label i{
+  width:var(--ui-radio)!important;
+  height:var(--ui-radio)!important;
+  flex:0 0 var(--ui-radio)!important;
+}
+
+/* Better touch interaction */
+label,
+button{
+  -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
+}
+
+/* No horizontal overflow from text */
+em,
+small,
+strong,
+legend{
+  overflow-wrap:anywhere;
+  word-break:normal;
+}
+
+@media(max-width:650px){
+  body{
+    background:var(--ui-page);
+  }
+
+  .survey-card{
+    box-shadow:0 8px 24px rgba(19,127,116,.09)!important;
+  }
+
+  footer{
+    margin-top:20px!important;
+    padding-top:13px!important;
+  }
+}
+
+@media(max-width:360px){
+  .survey-shell{
+    padding-inline:4px!important;
+  }
+
+  .survey-card{
+    padding-inline:7px!important;
+  }
+}
+
+
+/* ===== EMA adaptive sizing ===== */
+
+.brand-icon{
+  width:clamp(47px,14vw,58px)!important;
+  height:clamp(47px,14vw,58px)!important;
+  flex-basis:clamp(47px,14vw,58px)!important;
+  border-radius:clamp(14px,4vw,19px)!important;
+}
+
+.intro-hero{
+  width:clamp(130px,42vw,170px)!important;
+  height:clamp(130px,42vw,170px)!important;
+  margin:clamp(15px,5vw,22px) auto 10px!important;
+  padding:clamp(4px,1.5vw,7px)!important;
+  border-radius:clamp(22px,7vw,28px)!important;
+}
+
+.event-box{
+  margin-top:clamp(11px,3vw,18px)!important;
+  padding:clamp(11px,3vw,16px)!important;
+  border-radius:clamp(13px,3vw,16px)!important;
+}
+
+h2{
+  margin-top:clamp(17px,4vw,22px)!important;
+  font-size:clamp(19px,5vw,24px)!important;
+}
+
+/* Intro claim buttons */
+.claim-grid{
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:clamp(6px,2vw,12px)!important;
+  margin-top:clamp(15px,4vw,24px)!important;
+}
+
+.claim-card{
+  min-width:0!important;
+  min-height:clamp(108px,29vw,150px)!important;
+  padding:clamp(7px,2vw,13px) clamp(3px,1.5vw,9px)!important;
+  gap:clamp(4px,1.5vw,8px)!important;
+  border-radius:var(--ui-option-radius)!important;
+  font-size:clamp(11px,3vw,15px)!important;
+  line-height:1.55!important;
+}
+
+.claim-card img{
+  width:clamp(56px,18vw,88px)!important;
+  height:clamp(56px,18vw,88px)!important;
+  object-fit:contain!important;
+}
+
+/* Step card */
+.survey-step{
+  padding:clamp(13px,3vw,18px) clamp(8px,2.5vw,13px) 12px!important;
+  border:1px solid var(--ui-border)!important;
+  border-radius:var(--ui-option-radius)!important;
+}
+
+.survey-step:before{
+  top:clamp(9px,2.5vw,14px)!important;
+  right:clamp(9px,2.5vw,14px)!important;
+  width:clamp(33px,9.5vw,39px)!important;
+  height:clamp(33px,9.5vw,39px)!important;
+  font-size:clamp(17px,5vw,21px)!important;
+}
+
+legend{
+  min-height:clamp(38px,10vw,45px)!important;
+  margin-bottom:clamp(11px,3vw,16px)!important;
+  padding-right:clamp(41px,12vw,52px)!important;
+  font-size:var(--ui-question)!important;
+  line-height:1.65!important;
+}
+
+/* Long list rows */
+.option-list,
+.card-list{
+  gap:var(--ui-gap)!important;
+}
+
+.option-list label span,
+.card-list span{
+  grid-template-columns:
+    clamp(62px,19vw,92px)
+    minmax(0,1fr)
+    var(--ui-radio)!important;
+  column-gap:clamp(10px,3vw,18px)!important;
+  min-height:clamp(76px,22vw,100px)!important;
+  padding:clamp(7px,2vw,10px) clamp(8px,2.5vw,14px)!important;
+  border-radius:var(--ui-option-radius)!important;
+}
+
+.professional-icon{
+  width:clamp(59px,18vw,86px)!important;
+  height:clamp(59px,18vw,86px)!important;
+  min-width:0!important;
+}
+
+.professional-icon img{
+  width:clamp(57px,17.5vw,82px)!important;
+  height:clamp(57px,17.5vw,82px)!important;
+  object-fit:contain!important;
+}
+
+.option-list em,
+.card-list em{
+  font-size:var(--ui-option-text)!important;
+  line-height:1.65!important;
+}
+
+/* Visual choice cards */
+.tile-grid,
+.comfort-grid{
+  gap:var(--ui-gap)!important;
+}
+
+.tile-grid.three,
+.comfort-grid{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+}
+
+.tile-grid.two{
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+}
+
+.tile-grid span,
+.comfort-grid span{
+  min-width:0!important;
+  min-height:clamp(126px,40vw,195px)!important;
+  padding:clamp(7px,2vw,13px) clamp(2px,1vw,7px)!important;
+  gap:clamp(5px,1.5vw,10px)!important;
+  border-radius:var(--ui-option-radius)!important;
+}
+
+.tile-grid .professional-icon,
+.comfort-grid .professional-icon{
+  width:clamp(62px,23vw,112px)!important;
+  height:clamp(62px,23vw,112px)!important;
+}
+
+.tile-grid .professional-icon img,
+.comfort-grid .professional-icon img{
+  width:clamp(60px,22vw,108px)!important;
+  height:clamp(60px,22vw,108px)!important;
+}
+
+.tile-grid em,
+.comfort-grid em{
+  font-size:clamp(11px,3.3vw,16px)!important;
+  line-height:1.5!important;
+}
+
+@media(max-width:390px){
+  .claim-card{
+    min-height:104px!important;
+  }
+
+  .tile-grid span,
+  .comfort-grid span{
+    min-height:122px!important;
+  }
+}
