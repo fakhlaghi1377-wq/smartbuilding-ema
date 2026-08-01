@@ -3,41 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
-    <meta name="theme-color" content="#167d70">
+    <meta name="theme-color" content="#0f766e">
     <title>پرسشنامه باز شدن پنجره</title>
     <link rel="stylesheet" href="./survey.css">
 </head>
 <body>
 <main class="survey-shell">
 <section class="survey-card">
-    <header class="brand-row">
-        <div class="brand-icon">🏠</div>
-        <div>
-            <h1>مطالعه کیفیت محیط داخل</h1>
-            <p>پرسشنامه کوتاه باز شدن پنجره</p>
-        </div>
-    </header>
-
-    <div id="loading-view" class="view active status-view">
-        <div class="spinner"></div><p>در حال دریافت پرسشنامه...</p>
+    <div class="brand-row">
+        <div class="brand-icon">⌂</div>
+        <div><h1>مطالعه کیفیت محیط داخل</h1><p>پرسشنامه کوتاه باز شدن پنجره</p></div>
     </div>
 
-    <div id="error-view" class="view status-view">
-        <div class="message-icon error-icon">!</div>
-        <h2>امکان نمایش پرسشنامه نیست</h2>
-        <p id="error-message">لینک پرسشنامه معتبر نیست.</p>
-    </div>
+    <div id="loading-view" class="view active"><div class="spinner"></div><p>در حال دریافت پرسشنامه...</p></div>
+    <div id="error-view" class="view"><div class="message-icon error-icon">!</div><h2>امکان نمایش پرسشنامه نیست</h2><p id="error-message">لینک پرسشنامه معتبر نیست.</p></div>
 
     <div id="intro-view" class="view">
-        <div class="event-box">
-            <span>رویداد ثبت‌شده</span>
-            <strong id="event-time">--</strong>
-            <small id="occupant-code">--</small>
-        </div>
-        <div class="intro-illustration">🪟</div>
+        <div class="event-box"><span>رویداد ثبت‌شده</span><strong id="event-time">--</strong><small id="occupant-code">--</small></div>
         <h2>آیا شما پنجره را باز کردید؟</h2>
         <p class="helper-text">فقط فردی که پنجره را باز کرده است گزینه «بله» را انتخاب کند.</p>
         <div class="button-stack">
+            
             <button id="claim-button" class="button primary">بله، من پنجره را باز کردم</button>
             <button id="decline-button" class="button secondary">خیر، من باز نکردم</button>
             <button id="unsure-button" class="button ghost">مطمئن نیستم</button>
@@ -45,111 +31,91 @@
     </div>
 
     <form id="survey-form" class="view" novalidate>
-        <div class="progress-row">
-            <span id="progress-label">سؤال ۱ از ۸</span>
-            <strong>حدود ۱ دقیقه</strong>
-        </div>
-        <div class="progress-track" aria-hidden="true">
-            <div id="progress-bar" class="progress-bar"></div>
-        </div>
+        <div class="progress-row"><span id="progress-label">سؤال ۱ از ۹</span><strong>حدود ۱ دقیقه</strong></div>
+        <div class="progress-track" aria-hidden="true"><div id="progress-bar" class="progress-bar"></div></div>
 
-        <section class="survey-step active" data-accent="green">
+        <section class="survey-step active">
             <fieldset>
-                <legend><span class="question-number">۱</span> دلیل اصلی باز کردن پنجره چه بود؟</legend>
-                <div class="option-grid single-column reason-list">
-                    <label><input type="radio" name="opening_reason" value="fresh_air" required><span><b class="option-icon">🌿</b><em>برای اینکه هوای اتاق تازه شود</em><i></i></span></label>
-                    <label><input type="radio" name="opening_reason" value="too_warm"><span><b class="option-icon">🌡️</b><em>احساس گرما می‌کردم</em><i></i></span></label>
-                    <label><input type="radio" name="opening_reason" value="unpleasant_odor"><span><b class="option-icon">👃</b><em>بوی نامطبوع داخل اتاق بود</em><i></i></span></label>
-                    <label><input type="radio" name="opening_reason" value="high_humidity"><span><b class="option-icon">💧</b><em>احساس رطوبت زیاد می‌کردم</em><i></i></span></label>
-                    <label><input type="radio" name="opening_reason" value="connection_outdoors"><span><b class="option-icon">🏞️</b><em>می‌خواستم با فضای بیرون ارتباط داشته باشم</em><i></i></span></label>
-                    <label><input type="radio" name="opening_reason" value="habit"><span><b class="option-icon">🔄</b><em>از روی عادت پنجره را باز کردم</em><i></i></span></label>
-                    <label><input type="radio" name="opening_reason" value="other"><span><b class="option-icon">✏️</b><em>سایر</em><i></i></span></label>
+                <legend>دلیل اصلی باز کردن پنجره چه بود؟</legend>
+                <div class="option-grid single-column">
+                    <label><input type="radio" name="opening_reason" value="fresh_air" required><span>برای اینکه هوای اتاق تازه شود</span></label>
+                    <label><input type="radio" name="opening_reason" value="too_warm"><span>احساس گرما می‌کردم</span></label>
+                    <label><input type="radio" name="opening_reason" value="stuffy_air"><span>هوای اتاق گرفته یا خفه بود</span></label>
+                    <label><input type="radio" name="opening_reason" value="unpleasant_odor"><span>بوی نامطبوع داخل اتاق بود</span></label>
+                    <label><input type="radio" name="opening_reason" value="high_humidity"><span>احساس رطوبت زیاد می‌کردم</span></label>
+                    <label><input type="radio" name="opening_reason" value="natural_light"><span>می‌خواستم نور طبیعی وارد اتاق شود</span></label>
+                    <label><input type="radio" name="opening_reason" value="connection_outdoors"><span>می‌خواستم با فضای بیرون ارتباط داشته باشم</span></label>
+                    <label><input type="radio" name="opening_reason" value="habit"><span>از روی عادت پنجره را باز کردم</span></label>
+                    <label><input type="radio" name="opening_reason" value="opened_by_other"><span>شخص دیگری پنجره را باز کرد</span></label>
+                    <label><input type="radio" name="opening_reason" value="other" data-other-target="opening-reason-other-wrap"><span>سایر</span></label>
                 </div>
                 <div id="opening-reason-other-wrap" class="other-input-wrap hidden">
                     <label for="opening_reason_other" class="other-input-label">لطفاً دلیل را کوتاه بنویسید:</label>
-                    <textarea id="opening_reason_other" name="opening_reason_other" rows="3" maxlength="250" placeholder="دلیل دیگر را بنویسید"></textarea>
+                    <textarea id="opening_reason_other" name="opening_reason_other" rows="3" maxlength="250" placeholder="مثلاً برای خارج شدن دود یا بخار"></textarea>
                 </div>
             </fieldset>
         </section>
 
-        <section class="survey-step" data-accent="blue">
-            <fieldset>
-                <legend><span class="question-number">۲</span> اکنون سطح فعالیت خود را چگونه ارزیابی می‌کنید؟</legend>
-                <div class="visual-grid three">
-                    <label class="visual-option low"><input type="radio" name="activity" value="low" required><span><b>🧑‍💻</b><em>کم</em><i></i></span></label>
-                    <label class="visual-option medium"><input type="radio" name="activity" value="medium"><span><b>🚶</b><em>متوسط</em><i></i></span></label>
-                    <label class="visual-option high"><input type="radio" name="activity" value="high"><span><b>🏃</b><em>زیاد</em><i></i></span></label>
-                </div>
-            </fieldset>
-        </section>
+        <section class="survey-step"><fieldset><legend>اکنون چه کاری انجام می‌دهید؟</legend>
+            <div class="option-grid single-column">
+                <label><input type="radio" name="activity" value="resting" required><span>استراحت</span></label>
+                <label><input type="radio" name="activity" value="work_study"><span>کار یا مطالعه</span></label>
+                <label><input type="radio" name="activity" value="cooking"><span>آشپزی</span></label>
+                <label><input type="radio" name="activity" value="watching_tv"><span>تماشای تلویزیون</span></label>
+                <label><input type="radio" name="activity" value="sleep_preparation"><span>خواب یا آماده خواب</span></label>
+                <label><input type="radio" name="activity" value="cleaning"><span>نظافت</span></label>
+                <label><input type="radio" name="activity" value="exercise"><span>ورزش یا فعالیت بدنی</span></label>
+                <label><input type="radio" name="activity" value="other" data-other-target="activity-other-wrap"><span>سایر</span></label>
+            </div>
+            <div id="activity-other-wrap" class="other-input-wrap hidden">
+                <label for="activity_other" class="other-input-label">لطفاً فعالیت را کوتاه بنویسید:</label>
+                <textarea id="activity_other" name="activity_other" rows="3" maxlength="250" placeholder="فعالیت فعلی شما"></textarea>
+            </div>
+        </fieldset></section>
 
-        <section class="survey-step" data-accent="orange">
-            <fieldset>
-                <legend><span class="question-number">۳</span> اکنون دمای اتاق را چگونه احساس می‌کنید؟</legend>
-                <div class="visual-grid three">
-                    <label class="visual-option cold"><input type="radio" name="thermal_sensation" value="-1" required><span><b>❄️</b><em>سرد</em><i></i></span></label>
-                    <label class="visual-option neutral"><input type="radio" name="thermal_sensation" value="0"><span><b>🙂</b><em>مناسب</em><i></i></span></label>
-                    <label class="visual-option warm"><input type="radio" name="thermal_sensation" value="1"><span><b>☀️</b><em>گرم</em><i></i></span></label>
-                </div>
-            </fieldset>
-        </section>
+        <section class="survey-step"><fieldset><legend>اکنون دمای اتاق را چگونه احساس می‌کنید؟</legend><div class="scale-grid seven">
+            <label><input type="radio" name="thermal_sensation" value="-3" required><span>خیلی سرد</span></label><label><input type="radio" name="thermal_sensation" value="-2"><span>سرد</span></label><label><input type="radio" name="thermal_sensation" value="-1"><span>کمی سرد</span></label><label><input type="radio" name="thermal_sensation" value="0"><span>مناسب</span></label><label><input type="radio" name="thermal_sensation" value="1"><span>کمی گرم</span></label><label><input type="radio" name="thermal_sensation" value="2"><span>گرم</span></label><label><input type="radio" name="thermal_sensation" value="3"><span>خیلی گرم</span></label>
+        </div></fieldset></section>
 
-        <section class="survey-step" data-accent="teal">
-            <fieldset>
-                <legend><span class="question-number">۴</span> ترجیح می‌دهید دمای اتاق چگونه باشد؟</legend>
-                <div class="visual-grid three">
-                    <label class="visual-option warm"><input type="radio" name="thermal_preference" value="-1" required><span><b>🌡️⬆️</b><em>گرم‌تر</em><i></i></span></label>
-                    <label class="visual-option neutral"><input type="radio" name="thermal_preference" value="0"><span><b>＝</b><em>بدون تغییر</em><i></i></span></label>
-                    <label class="visual-option cold"><input type="radio" name="thermal_preference" value="1"><span><b>🌡️⬇️</b><em>خنک‌تر</em><i></i></span></label>
-                </div>
-            </fieldset>
-        </section>
+        <section class="survey-step"><fieldset><legend>ترجیح می‌دهید دمای اتاق چگونه باشد؟</legend><div class="scale-grid seven">
+            <label><input type="radio" name="thermal_preference" value="-3" required><span>خیلی گرم‌تر</span></label><label><input type="radio" name="thermal_preference" value="-2"><span>گرم‌تر</span></label><label><input type="radio" name="thermal_preference" value="-1"><span>کمی گرم‌تر</span></label><label><input type="radio" name="thermal_preference" value="0"><span>بدون تغییر</span></label><label><input type="radio" name="thermal_preference" value="1"><span>کمی خنک‌تر</span></label><label><input type="radio" name="thermal_preference" value="2"><span>خنک‌تر</span></label><label><input type="radio" name="thermal_preference" value="3"><span>خیلی خنک‌تر</span></label>
+        </div></fieldset></section>
 
-        <section class="survey-step" data-accent="purple">
-            <fieldset>
-                <legend><span class="question-number">۵</span> کیفیت هوای اتاق را چگونه ارزیابی می‌کنید؟</legend>
-                <div class="visual-grid three">
-                    <label class="visual-option bad"><input type="radio" name="air_freshness" value="-1" required><span><b>😣</b><em>گرفته</em><i></i></span></label>
-                    <label class="visual-option medium"><input type="radio" name="air_freshness" value="0"><span><b>😐</b><em>معمولی</em><i></i></span></label>
-                    <label class="visual-option good"><input type="radio" name="air_freshness" value="1"><span><b>🍃</b><em>تازه</em><i></i></span></label>
-                </div>
-            </fieldset>
-        </section>
+        <section class="survey-step"><fieldset><legend>هوای اتاق را چگونه ارزیابی می‌کنید؟</legend><div class="scale-grid seven">
+            <label><input type="radio" name="air_freshness" value="-3" required><span>خیلی گرفته</span></label><label><input type="radio" name="air_freshness" value="-2"><span>گرفته</span></label><label><input type="radio" name="air_freshness" value="-1"><span>کمی گرفته</span></label><label><input type="radio" name="air_freshness" value="0"><span>معمولی</span></label><label><input type="radio" name="air_freshness" value="1"><span>کمی تازه</span></label><label><input type="radio" name="air_freshness" value="2"><span>تازه</span></label><label><input type="radio" name="air_freshness" value="3"><span>خیلی تازه</span></label>
+        </div></fieldset></section>
 
-        <section class="survey-step" data-accent="blue">
-            <fieldset>
-                <legend><span class="question-number">۶</span> آیا جریان هوا را احساس می‌کنید؟</legend>
-                <div class="visual-grid two">
-                    <label class="visual-option good"><input type="radio" name="air_movement" value="1" required><span><b>💨</b><em>بله</em><i></i></span></label>
-                    <label class="visual-option neutral"><input type="radio" name="air_movement" value="0"><span><b>⊘</b><em>خیر</em><i></i></span></label>
-                </div>
-            </fieldset>
-        </section>
+        <section class="survey-step"><fieldset><legend>جریان هوا را چگونه احساس می‌کنید؟</legend><div class="scale-grid five">
+            <label><input type="radio" name="air_movement" value="1" required><span>کاملاً ساکن</span></label><label><input type="radio" name="air_movement" value="2"><span>کم</span></label><label><input type="radio" name="air_movement" value="3"><span>مناسب</span></label><label><input type="radio" name="air_movement" value="4"><span>زیاد</span></label><label><input type="radio" name="air_movement" value="5"><span>خیلی زیاد</span></label>
+        </div></fieldset></section>
 
-        <section id="air-source-step" class="survey-step" data-accent="green" data-conditional="air-source">
-            <fieldset>
-                <legend><span class="question-number">۷</span> بیشترِ جریان هوایی که احساس می‌کنید از کجا می‌آید؟</legend>
-                <div class="option-grid single-column reason-list">
-                    <label><input type="radio" name="air_source" value="window" required><span><b class="option-icon">🪟</b><em>پنجره</em><i></i></span></label>
-                    <label><input type="radio" name="air_source" value="hvac_vent"><span><b class="option-icon">▤</b><em>دریچه کولر یا بخاری</em><i></i></span></label>
-                    <label><input type="radio" name="air_source" value="fan"><span><b class="option-icon">🌀</b><em>پنکه</em><i></i></span></label>
-                    <label><input type="radio" name="air_source" value="multiple"><span><b class="option-icon">↔️</b><em>از چند منبع</em><i></i></span></label>
-                    <label><input type="radio" name="air_source" value="unknown"><span><b class="option-icon">❓</b><em>نمی‌دانم</em><i></i></span></label>
-                </div>
-                <p id="air-source-helper" class="conditional-note hidden">چون در سؤال قبل «خیر» را انتخاب کردید، این سؤال به‌صورت خودکار ثبت می‌شود.</p>
-            </fieldset>
-        </section>
+        <section class="survey-step"><fieldset><legend>سیستم سرمایش یا گرمایش اکنون روی چه وضعیتی است؟</legend>
+            <div class="option-grid single-column">
+                <label><input type="radio" name="hvac_mode" value="off" required><span>خاموش</span></label>
+                <label><input type="radio" name="hvac_mode" value="fan"><span>فقط فن</span></label>
+                <label><input type="radio" name="hvac_mode" value="cooling"><span>سرمایش</span></label>
+                <label><input type="radio" name="hvac_mode" value="heating"><span>گرمایش</span></label>
+                <label><input type="radio" name="hvac_mode" value="auto"><span>حالت خودکار</span></label>
+                <label><input type="radio" name="hvac_mode" value="unknown"><span>نمی‌دانم</span></label>
+            </div>
 
-        <section class="survey-step" data-accent="orange">
-            <fieldset>
-                <legend><span class="question-number">۸</span> در مجموع، اکنون چقدر احساس راحتی می‌کنید؟</legend>
-                <div class="visual-grid three comfort-grid">
-                    <label class="visual-option bad"><input type="radio" name="overall_comfort" value="1" required><span><b>☹️</b><em>ناراحت</em><i></i></span></label>
-                    <label class="visual-option medium"><input type="radio" name="overall_comfort" value="2"><span><b>😐</b><em>نه راحت و نه ناراحت</em><i></i></span></label>
-                    <label class="visual-option good"><input type="radio" name="overall_comfort" value="3"><span><b>😊</b><em>راحت</em><i></i></span></label>
+            <div id="hvac-speed-wrap" class="conditional-panel hidden">
+                <p class="conditional-title">دور دستگاه را انتخاب کنید:</p>
+                <div class="option-grid three-column">
+                    <label><input type="radio" name="hvac_speed" value="low"><span>کند</span></label>
+                    <label><input type="radio" name="hvac_speed" value="medium"><span>متوسط</span></label>
+                    <label><input type="radio" name="hvac_speed" value="high"><span>تند</span></label>
                 </div>
-            </fieldset>
-        </section>
+            </div>
+        </fieldset></section>
+
+        <section class="survey-step"><fieldset><legend>بیشترِ جریان هوایی که احساس می‌کنید از کجا می‌آید؟</legend><div class="option-grid single-column">
+            <label><input type="radio" name="air_source" value="window" required><span>پنجره</span></label><label><input type="radio" name="air_source" value="hvac_vent"><span>دریچه کولر یا بخاری</span></label><label><input type="radio" name="air_source" value="fan"><span>پنکه</span></label><label><input type="radio" name="air_source" value="multiple"><span>از چند منبع</span></label><label><input type="radio" name="air_source" value="none"><span>جریان هوایی احساس نمی‌کنم</span></label><label><input type="radio" name="air_source" value="unknown"><span>نمی‌دانم</span></label>
+        </div></fieldset></section>
+
+        <section class="survey-step"><fieldset><legend>در مجموع، اکنون چقدر احساس راحتی می‌کنید؟</legend><div class="scale-grid seven">
+            <label><input type="radio" name="overall_comfort" value="1" required><span>بسیار ناراحت</span></label><label><input type="radio" name="overall_comfort" value="2"><span>ناراحت</span></label><label><input type="radio" name="overall_comfort" value="3"><span>کمی ناراحت</span></label><label><input type="radio" name="overall_comfort" value="4"><span>نه راحت نه ناراحت</span></label><label><input type="radio" name="overall_comfort" value="5"><span>کمی راحت</span></label><label><input type="radio" name="overall_comfort" value="6"><span>راحت</span></label><label><input type="radio" name="overall_comfort" value="7"><span>بسیار راحت</span></label>
+        </div></fieldset></section>
 
         <p id="form-error" class="form-error" aria-live="polite"></p>
         <div class="wizard-actions">
@@ -159,17 +125,8 @@
         </div>
     </form>
 
-    <div id="success-view" class="view status-view">
-        <div class="message-icon success-icon">✓</div>
-        <h2>از همکاری شما سپاسگزاریم</h2>
-        <p>پاسخ شما دریافت شد. می‌توانید این صفحه را ببندید.</p>
-    </div>
-    <div id="closed-view" class="view status-view">
-        <div class="message-icon neutral-icon">✓</div>
-        <h2>این رویداد در انتظار پاسخ است</h2>
-        <p>این پرسشنامه هنوز برای تکمیل توسط فرد دیگری در دسترس است.</p>
-    </div>
-
+    <div id="success-view" class="view"><div class="message-icon success-icon">✓</div><h2>از همکاری شما سپاسگزاریم</h2><p>پاسخ شما دریافت شد. می‌توانید این صفحه را ببندید.</p></div>
+    <div id="closed-view" class="view"><div class="message-icon neutral-icon">✓</div><h2>این رویداد در انتظار پاسخ است</h2><p>این پرسشنامه هنوز برای تکمیل توسط فرد دیگری در دسترس است.</p></div>
     <footer>پاسخ‌ها با کد ناشناس ذخیره می‌شوند و نام واقعی نمایش داده نمی‌شود.</footer>
 </section>
 </main>
