@@ -75,6 +75,26 @@ function visibleSteps() {
     });
 }
 
+function currentStepElement() {
+    const steps = visibleSteps();
+    return steps[currentStepIndex] || null;
+}
+
+function syncCurrentStep(previousStepElement) {
+    const steps = visibleSteps();
+
+    if (previousStepElement) {
+        const preservedIndex = steps.indexOf(previousStepElement);
+        if (preservedIndex !== -1) {
+            currentStepIndex = preservedIndex;
+        }
+    }
+
+    if (currentStepIndex >= steps.length) {
+        currentStepIndex = Math.max(0, steps.length - 1);
+    }
+}
+
 function clearRadioGroup(name) {
     document.querySelectorAll(`input[name="${name}"]`).forEach(function (input) {
         input.checked = false;
@@ -126,24 +146,33 @@ function initializeOtherFields() {
     });
 }
 
-function updateWizard() {
+function updateWizard(previousStepElement) {
     updateConditionalAnswers();
-    const steps = visibleSteps();
+    syncCurrentStep(previousStepElement);
 
-    if (currentStepIndex >= steps.length) currentStepIndex = steps.length - 1;
+    const steps = visibleSteps();
+    const activeStep = steps[currentStepIndex];
 
     allSteps.forEach(function (step) {
         step.classList.remove("active");
     });
-    steps[currentStepIndex].classList.add("active");
+
+    if (!activeStep) {
+        formError.textContent = "خطا در نمایش مرحله پرسشنامه.";
+        return;
+    }
+
+    activeStep.classList.add("active");
 
     const number = currentStepIndex + 1;
     progressLabel.textContent = `سؤال ${number} از ${steps.length}`;
     progressBar.style.width = `${(number / steps.length) * 100}%`;
 
+    const isLastStep = currentStepIndex === steps.length - 1;
     previousButton.classList.toggle("hidden", currentStepIndex === 0);
-    nextButton.classList.toggle("hidden", currentStepIndex === steps.length - 1);
-    submitButton.classList.toggle("hidden", currentStepIndex !== steps.length - 1);
+    nextButton.classList.toggle("hidden", isLastStep);
+    submitButton.classList.toggle("hidden", !isLastStep);
+
     formError.textContent = "";
     window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -246,6 +275,28 @@ function numericValue(formData, key) {
 
 async function submitSurvey(event) {
     event.preventDefault();
+
+    const activeStep = currentStepElement();
+    const windowAnswer = selectedValue("window_closed_since_previous");
+
+    if (
+        activeStep &&
+        activeStep.dataset.question === "13" &&
+        windowAnswer === "yes"
+    ) {
+        const steps = visibleSteps();
+        const question14Index = steps.findIndex(function (step) {
+            return step.dataset.question === "14";
+        });
+
+        if (question14Index !== -1) {
+            currentStepIndex = question14Index;
+            updateWizard();
+            formError.textContent = "لطفاً دلیل اصلی بستن پنجره را انتخاب کنید.";
+        }
+        return;
+    }
+
     if (!validateCurrentStep()) return;
 
     const formData = new FormData(event.currentTarget);
@@ -256,7 +307,7 @@ async function submitSurvey(event) {
         : null;
 
     const answers = {
-        questionnaire_version: "DAILY_SURVEY_V2_GRAPHIC",
+        questionnaire_version: "DAILY_SURVEY_V4_ICONS_Q13_TWO_OPTIONS",
         survey_slot: loadedSurvey?.survey_slot || null,
         survey_date: loadedSurvey?.survey_date || null,
 
@@ -290,6 +341,21 @@ async function submitSurvey(event) {
         answer_client_submitted_at_utc: new Date().toISOString(),
         answer_client_timezone: "Asia/Tehran"
     };
+
+    if (closedWindow === "yes" && !closingReason) {
+        const steps = visibleSteps();
+        const question14Index = steps.findIndex(function (step) {
+            return step.dataset.question === "14";
+        });
+
+        if (question14Index !== -1) {
+            currentStepIndex = question14Index;
+            updateWizard();
+        }
+
+        formError.textContent = "لطفاً دلیل اصلی بستن پنجره را انتخاب کنید.";
+        return;
+    }
 
     setBusy(submitButton, true);
 
@@ -339,7 +405,12 @@ safeAddEventListener(nextButton, "click", function () {
 document.querySelectorAll('input[name="air_movement"], input[name="window_closed_since_previous"]')
     .forEach(function (input) {
         input.addEventListener("change", function () {
+            const activeStepBeforeChange = allSteps.find(function (step) {
+                return step.classList.contains("active");
+            });
+
             updateConditionalAnswers();
+            updateWizard(activeStepBeforeChange);
         });
     });
 
