@@ -83,13 +83,90 @@
 
         <section class="survey-step" data-question="3" data-accent="orange">
             <fieldset>
-                <legend><span class="question-number">۳</span> لباس فعلی شما بیشتر شبیه کدام است؟</legend>
-                <div class="option-grid single-column icon-list">
-                    <label><input type="radio" name="clothing_level" value="very_light" required><span><b>🩳</b><em><strong>بسیار سبک</strong><small>مانند شلوارک و تاپ</small></em><i></i></span></label>
-                    <label><input type="radio" name="clothing_level" value="light"><span><b>👕</b><em><strong>سبک</strong><small>تی‌شرت و شلوار</small></em><i></i></span></label>
-                    <label><input type="radio" name="clothing_level" value="normal"><span><b>🧥</b><em><strong>معمولی</strong><small>لباس آستین‌بلند یا پلیور نازک</small></em><i></i></span></label>
-                    <label><input type="radio" name="clothing_level" value="warm"><span><b>🧣</b><em><strong>گرم</strong><small>پلیور یا ژاکت</small></em><i></i></span></label>
-                    <label><input type="radio" name="clothing_level" value="very_warm"><span><b>🧤</b><em><strong>بسیار گرم</strong><small>چند لایه لباس</small></em><i></i></span></label>
+                <legend><span class="question-number">۳</span> لباس فعلی شما بیشتر شبیه کدام مجموعه است؟</legend>
+                <p class="question-hint">لباسی را انتخاب کنید که از نظر تعداد لایه و میزان گرمی، بیشترین شباهت را به پوشش فعلی شما دارد.</p>
+                <div class="clothing-grid">
+                    <label class="clothing-option">
+                        <input type="radio" name="clothing_level" value="very_light" required>
+                        <span>
+                            <b class="clothing-illustration">
+<svg class="clothing-svg" viewBox="0 0 220 130" aria-hidden="true">
+  <g class="cloth-line">
+    <path class="cloth-fill cloth-blue" d="M28 20h44l8 16-13 8-3-9v45H36V35l-4 9-13-8z"/>
+    <path class="cloth-fill cloth-navy" d="M116 61h70l7 45h-29l-8-27-7 27h-30z"/>
+    <path d="M47 20c3 9 15 9 18 0M151 61v18"/>
+  </g>
+</svg></b>
+                            <strong>بسیار سبک</strong>
+                            <small>تاپ یا رکابی همراه شلوارک</small>
+                            <i></i>
+                        </span>
+                    </label>
+                    <label class="clothing-option">
+                        <input type="radio" name="clothing_level" value="light">
+                        <span>
+                            <b class="clothing-illustration">
+<svg class="clothing-svg" viewBox="0 0 220 130" aria-hidden="true">
+  <g class="cloth-line">
+    <path class="cloth-fill cloth-sky" d="M28 18h47l18 14-10 15-13-8v51H36V39l-13 8-10-15z"/>
+    <path class="cloth-fill cloth-denim" d="M125 20h50l6 88h-24l-7-53-7 53h-24z"/>
+    <path d="M45 18c3 10 16 10 20 0M145 20l5 35 5-35"/>
+  </g>
+</svg></b>
+                            <strong>سبک</strong>
+                            <small>تی‌شرت همراه شلوار سبک</small>
+                            <i></i>
+                        </span>
+                    </label>
+                    <label class="clothing-option">
+                        <input type="radio" name="clothing_level" value="normal">
+                        <span>
+                            <b class="clothing-illustration">
+<svg class="clothing-svg" viewBox="0 0 220 130" aria-hidden="true">
+  <g class="cloth-line">
+    <path class="cloth-fill cloth-teal" d="M21 28l27-13h44l27 13-11 20-17-9v68H49V39l-17 9z"/>
+    <path class="cloth-fill cloth-gray" d="M132 18h47l8 90h-23l-8-55-8 55h-24z"/>
+    <path d="M55 16c3 12 20 12 25 0M155 18l1 35"/>
+  </g>
+</svg></b>
+                            <strong>معمولی</strong>
+                            <small>لباس آستین‌بلند یا پلیور نازک</small>
+                            <i></i>
+                        </span>
+                    </label>
+                    <label class="clothing-option">
+                        <input type="radio" name="clothing_level" value="warm">
+                        <span>
+                            <b class="clothing-illustration">
+<svg class="clothing-svg" viewBox="0 0 220 130" aria-hidden="true">
+  <g class="cloth-line">
+    <path class="cloth-fill cloth-brown" d="M22 31l25-16h48l26 16-12 22-15-10v65H48V43L33 53z"/>
+    <path d="M71 16v92M48 52h46M59 62h9M76 62h9"/>
+    <path class="cloth-fill cloth-dark" d="M139 27h42l10 80h-22l-9-49-7 49h-22z"/>
+  </g>
+</svg></b>
+                            <strong>گرم</strong>
+                            <small>پلیور ضخیم یا ژاکت</small>
+                            <i></i>
+                        </span>
+                    </label>
+                    <label class="clothing-option clothing-wide">
+                        <input type="radio" name="clothing_level" value="very_warm">
+                        <span>
+                            <b class="clothing-illustration">
+<svg class="clothing-svg" viewBox="0 0 220 130" aria-hidden="true">
+  <g class="cloth-line">
+    <path class="cloth-fill cloth-charcoal" d="M20 36l24-21h51l28 21-13 22-14-11v61H47V47L33 58z"/>
+    <path d="M69 16v92M49 47h46M58 31c10 8 22 8 30 0"/>
+    <path class="cloth-fill cloth-rust" d="M137 23h43l11 85h-23l-8-51-8 51h-23z"/>
+    <path class="cloth-fill cloth-red" d="M91 11c25-3 36 14 24 28-9-9-20-13-33-10z"/>
+  </g>
+</svg></b>
+                            <strong>بسیار گرم</strong>
+                            <small>چند لایه لباس، ژاکت یا لباس زمستانی</small>
+                            <i></i>
+                        </span>
+                    </label>
                 </div>
             </fieldset>
         </section>
@@ -201,7 +278,6 @@
                 <div class="visual-grid three">
                     <label class="visual-option neutral"><input type="radio" name="window_closed_since_previous" value="no" required><span><b>🪟</b><em>خیر</em><i></i></span></label>
                     <label class="visual-option good"><input type="radio" name="window_closed_since_previous" value="yes"><span><b>🪟🔒</b><em>بله</em><i></i></span></label>
-                    <label class="visual-option"><input type="radio" name="window_closed_since_previous" value="closed_by_other"><span><b>👤</b><em>شخص دیگری پنجره را بست</em><i></i></span></label>
                 </div>
             </fieldset>
         </section>
