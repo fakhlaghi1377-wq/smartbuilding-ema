@@ -75,16 +75,17 @@ function visibleSteps() {
     });
 }
 
-function currentStepElement() {
-    const steps = visibleSteps();
-    return steps[currentStepIndex] || null;
+function activeStepElement() {
+    return allSteps.find(function (step) {
+        return step.classList.contains("active");
+    }) || null;
 }
 
-function syncCurrentStep(previousStepElement) {
+function preserveCurrentStep(previousStep) {
     const steps = visibleSteps();
 
-    if (previousStepElement) {
-        const preservedIndex = steps.indexOf(previousStepElement);
+    if (previousStep) {
+        const preservedIndex = steps.indexOf(previousStep);
         if (preservedIndex !== -1) {
             currentStepIndex = preservedIndex;
         }
@@ -146,9 +147,9 @@ function initializeOtherFields() {
     });
 }
 
-function updateWizard(previousStepElement) {
+function updateWizard(previousStep) {
     updateConditionalAnswers();
-    syncCurrentStep(previousStepElement);
+    preserveCurrentStep(previousStep);
 
     const steps = visibleSteps();
     const activeStep = steps[currentStepIndex];
@@ -168,10 +169,11 @@ function updateWizard(previousStepElement) {
     progressLabel.textContent = `سؤال ${number} از ${steps.length}`;
     progressBar.style.width = `${(number / steps.length) * 100}%`;
 
-    const isLastStep = currentStepIndex === steps.length - 1;
+    const isLastVisibleStep = currentStepIndex === steps.length - 1;
+
     previousButton.classList.toggle("hidden", currentStepIndex === 0);
-    nextButton.classList.toggle("hidden", isLastStep);
-    submitButton.classList.toggle("hidden", !isLastStep);
+    nextButton.classList.toggle("hidden", isLastVisibleStep);
+    submitButton.classList.toggle("hidden", !isLastVisibleStep);
 
     formError.textContent = "";
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -276,14 +278,20 @@ function numericValue(formData, key) {
 async function submitSurvey(event) {
     event.preventDefault();
 
-    const activeStep = currentStepElement();
+    const activeStep = activeStepElement();
     const windowAnswer = selectedValue("window_closed_since_previous");
 
+    /*
+     * سؤال ۱۳ با پاسخ «بله» نباید فرم را ثبت کند.
+     * در این حالت سؤال ۱۴ به مراحل اضافه می‌شود و کاربر به آن منتقل می‌شود.
+     */
     if (
         activeStep &&
         activeStep.dataset.question === "13" &&
         windowAnswer === "yes"
     ) {
+        updateConditionalAnswers();
+
         const steps = visibleSteps();
         const question14Index = steps.findIndex(function (step) {
             return step.dataset.question === "14";
@@ -307,7 +315,7 @@ async function submitSurvey(event) {
         : null;
 
     const answers = {
-        questionnaire_version: "DAILY_SURVEY_V4_ICONS_Q13_TWO_OPTIONS",
+        questionnaire_version: "DAILY_SURVEY_V3_EMOJI_Q13_FIXED",
         survey_slot: loadedSurvey?.survey_slot || null,
         survey_date: loadedSurvey?.survey_date || null,
 
@@ -405,12 +413,10 @@ safeAddEventListener(nextButton, "click", function () {
 document.querySelectorAll('input[name="air_movement"], input[name="window_closed_since_previous"]')
     .forEach(function (input) {
         input.addEventListener("change", function () {
-            const activeStepBeforeChange = allSteps.find(function (step) {
-                return step.classList.contains("active");
-            });
+            const previousStep = activeStepElement();
 
             updateConditionalAnswers();
-            updateWizard(activeStepBeforeChange);
+            updateWizard(previousStep);
         });
     });
 

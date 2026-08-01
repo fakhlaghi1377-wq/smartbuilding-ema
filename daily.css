@@ -79,71 +79,14 @@ footer{margin-top:27px;padding-top:16px;border-top:1px solid var(--border);color
 }
 
 
-/* Professional PNG icon pack */
-.custom-option-icon {
-    position: relative;
-    display: grid !important;
-    place-items: center;
-    width: 100%;
-    min-height: 92px !important;
-    border-radius: 18px;
-    background: transparent !important;
-    overflow: visible;
+/* Question 13: two clear options */
+.survey-step[data-question="13"] .visual-grid.two {
+    max-width: 560px;
+    margin-inline: auto;
 }
 
-.custom-option-icon img {
-    display: block;
-    width: 108px;
-    height: 108px;
-    object-fit: contain;
-    border-radius: 18px;
-    filter: drop-shadow(0 7px 11px rgba(21, 66, 61, .12));
-}
-
-.hero-window {
-    padding: 0 !important;
-    overflow: hidden;
-}
-
-.hero-window img {
-    display: block;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    border-radius: inherit;
-}
-
-.icon-list label span {
-    grid-template-columns: 88px 1fr 24px;
-}
-
-.icon-list .custom-option-icon {
-    width: 82px !important;
-    min-height: 82px !important;
-}
-
-.icon-list .custom-option-icon img {
-    width: 78px;
-    height: 78px;
-}
-
-@media (max-width: 650px) {
-    .custom-option-icon img {
-        width: 86px;
-        height: 86px;
-    }
-
-    .icon-list label span {
-        grid-template-columns: 68px 1fr 22px;
-    }
-
-    .icon-list .custom-option-icon {
-        width: 64px !important;
-        min-height: 64px !important;
-    }
-
-    .icon-list .custom-option-icon img {
-        width: 61px;
-        height: 61px;
+@media (max-width: 420px) {
+    .survey-step[data-question="13"] .visual-grid.two {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
