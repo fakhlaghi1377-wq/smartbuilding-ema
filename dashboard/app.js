@@ -761,7 +761,26 @@ async function updateWindowSummary(summary) {
     const { data, error } = await client.storage
         .from(CONFIG.WINDOW_IMAGE_BUCKET)
         .createSignedUrl(imageRow.image_path, 3600);
-    if (error) throw error;
+
+    if (error || !data?.signedUrl) {
+        console.warn("Window image unavailable:", imageRow.image_path, error);
+
+        if (image) {
+            image.removeAttribute("src");
+            image.classList.add("hidden");
+        }
+        if (placeholder) {
+            placeholder.textContent =
+                "Image record exists, but the file is unavailable in cloud storage.";
+            placeholder.classList.remove("hidden");
+        }
+        setText(
+            "window-image-time",
+            `Image unavailable · record time: ${formatDateTime(imageRow.recorded_at)}`
+        );
+        return;
+    }
+
     if (image) {
         image.src = data.signedUrl;
         image.classList.remove("hidden");
@@ -1101,21 +1120,12 @@ function updateOutdoorCharts(rawRows, historyHours) {
 async function refreshDashboard() {
     if (!session || refreshInProgress) return;
     refreshInProgress = true;
+
     try {
         updateConnectionStatus(true, "Updating…");
         const hours = Number(byId("history-hours")?.value || 24);
-        const [
-            latest,
-            history,
-            latestOutdoor,
-            outdoorHistory,
-            latestEnergy,
-            energyHistory,
-            windowSummary,
-            windowHistory,
-            pendingEma,
-            latestDaily
-        ] = await Promise.all([
+
+        const results = await Promise.allSettled([
             fetchLatestReading(),
             fetchHistory(hours),
             fetchLatestOutdoorWeather(),
@@ -1127,17 +1137,66 @@ async function refreshDashboard() {
             fetchPendingEma(),
             fetchLatestDaily()
         ]);
-        updateLatest(latest);
-        updateCharts(history, hours);
-        updateLatestOutdoorWeather(latestOutdoor);
-        updateOutdoorCharts(outdoorHistory, hours);
-        updateLatestEnergy(latestEnergy);
-        updateEnergyCharts(energyHistory, hours);
-        await updateWindowSummary(windowSummary);
-        updateWindowChart(windowHistory, hours);
-        updatePendingEma(pendingEma);
-        const latestDailyWithOccupants = await attachOccupantsSafely(latestDaily);
-        updateLatestDaily(latestDailyWithOccupants);
+
+        const [
+            latestResult,
+            historyResult,
+            latestOutdoorResult,
+            outdoorHistoryResult,
+            latestEnergyResult,
+            energyHistoryResult,
+            windowSummaryResult,
+            windowHistoryResult,
+            pendingEmaResult,
+            latestDailyResult
+        ] = results;
+
+        if (pendingEmaResult.status === "fulfilled") {
+            updatePendingEma(pendingEmaResult.value);
+        } else {
+            console.error("EMA refresh failed:", pendingEmaResult.reason);
+            setText("ema-time", "Could not load EMA questionnaires.");
+        }
+
+        if (latestDailyResult.status === "fulfilled") {
+            const latestDailyWithOccupants =
+                await attachOccupantsSafely(latestDailyResult.value);
+            updateLatestDaily(latestDailyWithOccupants);
+        } else {
+            console.error("Daily survey refresh failed:", latestDailyResult.reason);
+        }
+
+        if (latestResult.status === "fulfilled") updateLatest(latestResult.value);
+        else console.error("Latest environment refresh failed:", latestResult.reason);
+
+        if (historyResult.status === "fulfilled") updateCharts(historyResult.value, hours);
+        else console.error("Environment history refresh failed:", historyResult.reason);
+
+        if (latestOutdoorResult.status === "fulfilled") updateLatestOutdoorWeather(latestOutdoorResult.value);
+        else console.error("Latest outdoor refresh failed:", latestOutdoorResult.reason);
+
+        if (outdoorHistoryResult.status === "fulfilled") updateOutdoorCharts(outdoorHistoryResult.value, hours);
+        else console.error("Outdoor history refresh failed:", outdoorHistoryResult.reason);
+
+        if (latestEnergyResult.status === "fulfilled") updateLatestEnergy(latestEnergyResult.value);
+        else console.error("Latest energy refresh failed:", latestEnergyResult.reason);
+
+        if (energyHistoryResult.status === "fulfilled") updateEnergyCharts(energyHistoryResult.value, hours);
+        else console.error("Energy history refresh failed:", energyHistoryResult.reason);
+
+        if (windowHistoryResult.status === "fulfilled") updateWindowChart(windowHistoryResult.value, hours);
+        else console.error("Window history refresh failed:", windowHistoryResult.reason);
+
+        if (windowSummaryResult.status === "fulfilled") {
+            try {
+                await updateWindowSummary(windowSummaryResult.value);
+            } catch (error) {
+                console.error("Window summary rendering failed:", error);
+            }
+        } else {
+            console.error("Window summary refresh failed:", windowSummaryResult.reason);
+        }
+
         setText("last-refresh", new Date().toLocaleTimeString("en-CA", {
             timeZone: CONFIG.DISPLAY_TIME_ZONE,
             hour: "2-digit",
@@ -1145,7 +1204,17 @@ async function refreshDashboard() {
             second: "2-digit",
             hour12: false
         }));
-        updateConnectionStatus(true, "Cloud connected");
+
+        const rejectedCount = results.filter(
+            (result) => result.status === "rejected"
+        ).length;
+
+        updateConnectionStatus(
+            true,
+            rejectedCount
+                ? `Cloud connected · ${rejectedCount} section(s) unavailable`
+                : "Cloud connected"
+        );
     } catch (error) {
         console.error("Dashboard refresh failed:", error);
         if (!navigator.onLine) clearVisionSummary();
@@ -1168,7 +1237,30 @@ function stopDashboard() {
 function startDashboard() {
     stopDashboard();
     refreshDashboard();
-    refreshTimer = setInterval(refreshDashboard, Number(CONFIG.REFRESH_INTERVAL_MS) || 30000);
+
+    refreshTimer = setInterval(
+        refreshDashboard,
+        Number(CONFIG.REFRESH_INTERVAL_MS) || 30000
+    );
+
+    const surveyChannel = client
+        .channel("dashboard-survey-events")
+        .on(
+            "postgres_changes",
+            {
+                event: "*",
+                schema: "public",
+                table: CONFIG.SURVEY_EVENTS_TABLE
+            },
+            () => refreshDashboard()
+        )
+        .subscribe((status) => {
+            if (status === "CHANNEL_ERROR") {
+                console.warn("Survey Realtime unavailable; polling remains active.");
+            }
+        });
+
+    realtimeChannels.push(surveyChannel);
 }
 
 function renderSession(newSession) {
