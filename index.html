@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+  <meta name="theme-color" content="#2d8b57">
+  <title>پرسشنامه باز شدن پنجره</title>
+  <link rel="preload" as="image" href="./icons/hero-window.png" fetchpriority="high">
+  <link rel="stylesheet" href="./survey.css?v=20260801-responsive-design-system">
+</head>
+<body>
+<main class="survey-shell"><section class="survey-card">
+  <header class="brand-row"><div class="brand-icon"><img src="./icons/hero-window.png" loading="eager" decoding="async" fetchpriority="high" alt=""></div><div><h1>مطالعه کیفیت محیط داخل</h1><p>پرسشنامه کوتاه باز شدن پنجره</p></div></header>
+  <div id="loading-view" class="view active state-view"><div class="spinner"></div><p>در حال دریافت پرسشنامه...</p></div>
+  <div id="error-view" class="view state-view"><div class="message-icon error-icon">!</div><h2>امکان نمایش پرسشنامه نیست</h2><p id="error-message">لینک پرسشنامه معتبر نیست.</p></div>
+  <div id="intro-view" class="view">
+    <div class="intro-hero"><img src="./icons/hero-window.png" alt="پنجره باز و هوای تازه"></div>
+    <div class="event-box"><span>رویداد ثبت‌شده</span><strong id="event-time">--</strong><small id="occupant-code">--</small></div>
+    <h2>آیا شما پنجره را باز کردید؟</h2><p class="helper-text">فقط فردی که پنجره را باز کرده است گزینه «بله» را انتخاب کند.</p>
+    <div class="claim-grid">
+      <button id="claim-button" class="claim-card claim-yes"><img src="./icons/claim-yes.png" alt=""><span>بله، من پنجره را باز کردم</span></button>
+      <button id="decline-button" class="claim-card claim-no"><img src="./icons/claim-no.png" alt=""><span>خیر، من باز نکردم</span></button>
+      <button id="unsure-button" class="claim-card claim-unsure"><img src="./icons/claim-unsure.png" alt=""><span>مطمئن نیستم</span></button>
+    </div>
+  </div>
+  <form id="survey-form" class="view" novalidate>
+    <div class="progress-row"><span id="progress-label">سؤال ۱ از ۸</span><strong>حدود ۱ دقیقه</strong></div><div class="progress-track"><div id="progress-bar"></div></div>
+
+    <section class="survey-step active theme-green" data-number="1"><fieldset><legend>دلیل اصلی باز کردن پنجره چه بود؟</legend><div class="option-list">
+      <label><input type="radio" name="opening_reason" value="fresh_air" required><span><b class="professional-icon"><img src="./icons/reason-fresh-air.png" alt="هوای تازه" loading="lazy" decoding="async"></b><em>برای اینکه هوای اتاق تازه شود.</em><i></i></span></label>
+      <label><input type="radio" name="opening_reason" value="too_warm"><span><b class="professional-icon"><img src="./icons/reason-warm.png" alt="احساس گرما" loading="lazy" decoding="async"></b><em>احساس گرما می‌کردم.</em><i></i></span></label>
+      <label><input type="radio" name="opening_reason" value="unpleasant_odor"><span><b class="professional-icon"><img src="./icons/reason-odor.png" alt="بوی نامطبوع" loading="lazy" decoding="async"></b><em>بوی نامطبوع داخل اتاق بود.</em><i></i></span></label>
+      <label><input type="radio" name="opening_reason" value="high_humidity"><span><b class="professional-icon"><img src="./icons/reason-humidity.png" alt="رطوبت زیاد" loading="lazy" decoding="async"></b><em>احساس رطوبت زیاد می‌کردم.</em><i></i></span></label>
+      <label><input type="radio" name="opening_reason" value="connection_outdoors"><span><b class="professional-icon"><img src="./icons/reason-outdoors.png" alt="ارتباط با بیرون" loading="lazy" decoding="async"></b><em>می‌خواستم با فضای بیرون ارتباط داشته باشم.</em><i></i></span></label>
+      <label><input type="radio" name="opening_reason" value="habit"><span><b class="professional-icon"><img src="./icons/reason-habit.png" alt="عادت" loading="lazy" decoding="async"></b><em>از روی عادت پنجره را باز کردم.</em><i></i></span></label>
+      <label><input type="radio" name="opening_reason" value="other"><span><b class="professional-icon"><img src="./icons/reason-other.png" alt="سایر" loading="lazy" decoding="async"></b><em>سایر</em><i></i></span></label>
+    </div><div id="opening-reason-other-wrap" class="other-input-wrap hidden"><label for="opening_reason_other">لطفاً دلیل را بنویسید:</label><textarea id="opening_reason_other" name="opening_reason_other" maxlength="250"></textarea></div></fieldset></section>
+
+    <section class="survey-step theme-blue" data-number="2"><fieldset><legend>اکنون سطح فعالیت خود را چگونه ارزیابی می‌کنید؟</legend><div class="card-list">
+      <label><input type="radio" name="activity" value="low" required><span class="mint"><b class="professional-icon"><img src="./icons/activity-low.png" alt="فعالیت کم" loading="lazy" decoding="async"></b><em>کم</em><i></i></span></label>
+      <label><input type="radio" name="activity" value="medium"><span class="amber"><b class="professional-icon"><img src="./icons/activity-medium.png" alt="فعالیت متوسط" loading="lazy" decoding="async"></b><em>متوسط</em><i></i></span></label>
+      <label><input type="radio" name="activity" value="high"><span class="coral"><b class="professional-icon"><img src="./icons/activity-high.png" alt="فعالیت زیاد" loading="lazy" decoding="async"></b><em>زیاد</em><i></i></span></label>
+    </div></fieldset></section>
+
+    <section class="survey-step theme-orange" data-number="3"><fieldset><legend>اکنون دمای اتاق را چگونه احساس می‌کنید؟</legend><div class="tile-grid three">
+      <label><input type="radio" name="thermal_sensation" value="-1" required><span class="ice"><b class="professional-icon"><img src="./icons/temperature-cold.png" alt="سرد" loading="lazy" decoding="async"></b><em>سرد</em><i></i></span></label><label><input type="radio" name="thermal_sensation" value="0"><span class="mint"><b class="professional-icon"><img src="./icons/temperature-neutral.png" alt="دمای مناسب" loading="lazy" decoding="async"></b><em>مناسب</em><i></i></span></label><label><input type="radio" name="thermal_sensation" value="1"><span class="amber"><b class="professional-icon"><img src="./icons/temperature-warm.png" alt="گرم" loading="lazy" decoding="async"></b><em>گرم</em><i></i></span></label>
+    </div></fieldset></section>
+
+    <section class="survey-step theme-teal" data-number="4"><fieldset><legend>ترجیح می‌دهید دمای اتاق چگونه باشد؟</legend><div class="tile-grid three">
+      <label><input type="radio" name="thermal_preference" value="-1" required><span class="ice"><b class="professional-icon"><img src="./icons/preference-cooler.png" alt="خنک‌تر" loading="lazy" decoding="async"></b><em>خنک‌تر</em><i></i></span></label><label><input type="radio" name="thermal_preference" value="0"><span class="mint"><b class="professional-icon"><img src="./icons/preference-same.png" alt="بدون تغییر" loading="lazy" decoding="async"></b><em>بدون تغییر</em><i></i></span></label><label><input type="radio" name="thermal_preference" value="1"><span class="peach"><b class="professional-icon"><img src="./icons/preference-warmer.png" alt="گرم‌تر" loading="lazy" decoding="async"></b><em>گرم‌تر</em><i></i></span></label>
+    </div></fieldset></section>
+
+    <section class="survey-step theme-purple" data-number="5"><fieldset><legend>کیفیت هوای اتاق را چگونه ارزیابی می‌کنید؟</legend><div class="tile-grid three">
+      <label><input type="radio" name="air_freshness" value="-1" required><span class="rose"><b class="professional-icon"><img src="./icons/air-stuffy.png" alt="هوای گرفته" loading="lazy" decoding="async"></b><em>گرفته</em><i></i></span></label><label><input type="radio" name="air_freshness" value="0"><span class="amber"><b class="professional-icon"><img src="./icons/air-normal.png" alt="هوای معمولی" loading="lazy" decoding="async"></b><em>معمولی</em><i></i></span></label><label><input type="radio" name="air_freshness" value="1"><span class="mint"><b class="professional-icon"><img src="./icons/air-fresh.png" alt="هوای تازه" loading="lazy" decoding="async"></b><em>تازه</em><i></i></span></label>
+    </div></fieldset></section>
+
+    <section class="survey-step theme-blue" data-number="6"><fieldset><legend>آیا جریان هوا را احساس می‌کنید؟</legend><div class="tile-grid two">
+      <label><input type="radio" name="air_movement" value="1" required><span class="ice"><b class="professional-icon"><img src="./icons/airflow-yes.png" alt="جریان هوا" loading="lazy" decoding="async"></b><em>بله</em><i></i></span></label><label><input type="radio" name="air_movement" value="0"><span class="neutral"><b class="professional-icon"><img src="./icons/airflow-no.png" alt="بدون جریان هوا" loading="lazy" decoding="async"></b><em>خیر</em><i></i></span></label>
+    </div></fieldset></section>
+
+    <section id="air-source-step" class="survey-step theme-green" data-number="7"><fieldset><legend>بیشترِ جریان هوایی که احساس می‌کنید از کجا می‌آید؟</legend><div class="option-list compact">
+      <label><input type="radio" name="air_source" value="window" required><span><b class="professional-icon"><img src="./icons/source-window.png" alt="پنجره" loading="lazy" decoding="async"></b><em>پنجره</em><i></i></span></label><label><input type="radio" name="air_source" value="hvac_vent"><span><b class="professional-icon"><img src="./icons/source-hvac.png" alt="دریچه کولر یا بخاری" loading="lazy" decoding="async"></b><em>دریچه کولر یا بخاری</em><i></i></span></label><label><input type="radio" name="air_source" value="fan"><span><b class="professional-icon"><img src="./icons/source-fan.png" alt="پنکه" loading="lazy" decoding="async"></b><em>پنکه</em><i></i></span></label><label><input type="radio" name="air_source" value="multiple"><span><b class="professional-icon"><img src="./icons/source-multiple.png" alt="چند منبع" loading="lazy" decoding="async"></b><em>از چند منبع</em><i></i></span></label><label><input type="radio" name="air_source" value="unknown"><span><b class="professional-icon"><img src="./icons/source-unknown.png" alt="نمی‌دانم" loading="lazy" decoding="async"></b><em>نمی‌دانم</em><i></i></span></label>
+    </div></fieldset></section>
+
+    <section class="survey-step theme-orange" data-number="8"><fieldset><legend>در مجموع، اکنون چقدر احساس راحتی می‌کنید؟</legend><div class="comfort-grid">
+      <label><input type="radio" name="overall_comfort" value="1" required><span><b class="professional-icon"><img src="./icons/comfort-bad.png" alt="ناراحت" loading="lazy" decoding="async"></b><em>ناراحت</em><i></i></span></label><label><input type="radio" name="overall_comfort" value="2"><span><b class="professional-icon"><img src="./icons/comfort-neutral.png" alt="خنثی" loading="lazy" decoding="async"></b><em>خنثی</em><i></i></span></label><label><input type="radio" name="overall_comfort" value="3"><span><b class="professional-icon"><img src="./icons/comfort-good.png" alt="راحت" loading="lazy" decoding="async"></b><em>راحت</em><i></i></span></label>
+    </div></fieldset></section>
+
+    <p id="form-error" class="form-error" aria-live="polite"></p><div class="wizard-actions"><button id="previous-button" type="button" class="button ghost hidden">سؤال قبلی</button><button id="next-button" type="button" class="button primary">سؤال بعدی</button><button id="submit-button" type="submit" class="button primary hidden">ثبت پاسخ‌ها</button></div>
+  </form>
+  <div id="success-view" class="view state-view"><div class="message-icon success-icon">✓</div><h2>از همکاری شما سپاسگزاریم</h2><p>پاسخ شما دریافت شد. می‌توانید این صفحه را ببندید.</p></div>
+  <div id="closed-view" class="view state-view"><div class="message-icon neutral-icon">✓</div><h2>این رویداد در انتظار پاسخ است</h2><p>این پرسشنامه هنوز برای تکمیل توسط فرد دیگری در دسترس است.</p></div>
+  <footer>پاسخ‌ها با کد ناشناس ذخیره می‌شوند و نام واقعی نمایش داده نمی‌شود.</footer>
+</section></main>
+<script src="./survey-config.js"></script><script src="./cloud-survey.js"></script><script src="./survey.js?v=20260801-responsive-design-system"></script>
+</body></html>
