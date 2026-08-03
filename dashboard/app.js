@@ -435,6 +435,18 @@ function isPortableAcVibrationActive(reading) {
         && pulses >= 25 && activeMs >= 30 && activityPercent >= 0.10;
 }
 
+function isPortableAcPowerActive(reading) {
+    const realPower = Number(reading?.real_power_w);
+    return Number.isFinite(realPower) && realPower >= 200;
+}
+
+function isPortableAcOffEvidence(reading) {
+    const realPower = Number(reading?.real_power_w);
+    return Number.isFinite(realPower)
+        && realPower <= 170
+        && !isPortableAcVibrationActive(reading);
+}
+
 function updateCoolingCards(rows) {
     const recent = [...(rows || [])]
         .filter((row) => row?.recorded_at)
@@ -453,9 +465,14 @@ function updateCoolingCards(rows) {
         return;
     }
 
-    const activeCount = recent.filter(isPortableAcVibrationActive).length;
+    // The vibration sensor can become weak depending on its mounting position.
+    // Accept either strong vibration or the portable AC power band as ON evidence.
+    const activeCount = recent.filter((row) =>
+        isPortableAcVibrationActive(row) || isPortableAcPowerActive(row)
+    ).length;
+    const offCount = recent.filter(isPortableAcOffEvidence).length;
     if (recent.length >= 2 && activeCount >= 2) portableAcState = true;
-    else if (recent.length === 3 && activeCount === 0) portableAcState = false;
+    else if (recent.length === 3 && offCount === 3) portableAcState = false;
 
     if (portableAcState === true) {
         badge.textContent = "ON";
@@ -469,7 +486,7 @@ function updateCoolingCards(rows) {
     }
     setText(
         "portable-ac-details",
-        `Latest vibration: ${Number(latest.vibration_pulse_count) || 0} pulses · ${formatNumber(latest.vibration_activity_percent, 2)}%`
+        `Vibration: ${Number(latest.vibration_pulse_count) || 0} pulses · ${formatNumber(latest.vibration_activity_percent, 2)}% · Power: ${formatNumber(latest.real_power_w, 1)} W`
     );
 }
 
