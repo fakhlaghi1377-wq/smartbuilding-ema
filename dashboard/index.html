@@ -192,22 +192,59 @@
 
             <section class="toolbar dashboard-page-section" data-dashboard-page="energy">
                 <div>
-                    <h2>Cooling Status</h2>
+                    <h2>Energy Monitoring</h2>
                     <p id="energy-time">Waiting for data…</p>
                 </div>
             </section>
 
             <section class="cards-grid energy-cards-grid dashboard-page-section" data-dashboard-page="energy">
-                <article class="data-card energy-card ac-card">
+                <article class="data-card energy-card">
+                    <h3>Current</h3>
+                    <div class="value-row"><span id="energy-current" class="main-value">--</span><span class="unit">A</span></div>
+                    <p class="sensor-label">Measured RMS current</p>
+                </article>
+                <article class="data-card energy-card">
+                    <h3>Real Power</h3>
+                    <div class="value-row"><span id="energy-real-power" class="main-value">--</span><span class="unit">W</span></div>
+                    <p class="sensor-label">Estimated active power</p>
+                </article>
+                <article class="data-card energy-card">
+                    <h3>Apparent Power</h3>
+                    <div class="value-row"><span id="energy-apparent-power" class="main-value">--</span><span class="unit">VA</span></div>
+                    <p class="sensor-label">Voltage × measured current</p>
+                </article>
+                <article class="data-card energy-card">
+                    <h3>Interval Energy</h3>
+                    <div class="value-row"><span id="energy-interval" class="main-value">--</span><span class="unit">Wh</span></div>
+                    <p class="sensor-label">Energy used during the latest interval</p>
+                </article>
+                <article class="data-card energy-card">
+                    <h3>Total Energy</h3>
+                    <div class="value-row"><span id="energy-total" class="main-value">--</span><span class="unit">kWh</span></div>
+                    <p class="sensor-label">Cumulative energy tracked by the CT node</p>
+                </article>
+                <article class="data-card energy-card cooling-card">
                     <h3>Portable Air Conditioner</h3>
-                    <div id="portable-ac-status" class="large-badge ac-status unknown">NO DATA</div>
-                    <p id="portable-ac-detail" class="sensor-label">Waiting for the vibration sensor</p>
+                    <div id="portable-ac-badge" class="large-badge neutral">NO DATA</div>
+                    <p id="portable-ac-details" class="sensor-label">Waiting for vibration data…</p>
                 </article>
-                <article class="data-card energy-card ac-card">
+                <article class="data-card energy-card cooling-card">
                     <h3>Ducted Air Conditioner</h3>
-                    <div id="ducted-ac-status" class="large-badge ac-status unknown">NO DATA</div>
-                    <p id="ducted-ac-detail" class="sensor-label">Sensor not connected yet</p>
+                    <div id="ducted-ac-badge" class="large-badge neutral">NO DATA</div>
+                    <p class="sensor-label">Vibration sensor not connected yet</p>
                 </article>
+            </section>
+
+            <section class="charts-heading dashboard-page-section" data-dashboard-page="energy">
+                <div>
+                    <h2>Energy Trends</h2>
+                    <p id="energy-history-summary">Loading history…</p>
+                </div>
+            </section>
+
+            <section class="charts-grid dashboard-page-section" data-dashboard-page="energy">
+                <article class="chart-card"><h3>Real Power History</h3><div class="chart-container"><canvas id="power-chart"></canvas></div></article>
+                <article class="chart-card"><h3>Cumulative Energy History</h3><div class="chart-container"><canvas id="energy-total-chart"></canvas></div></article>
             </section>
 
             <section class="toolbar dashboard-page-section" data-dashboard-page="window">
