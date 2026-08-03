@@ -62,11 +62,9 @@ const OUTDOOR_WEATHER_COLUMNS = [
 
 const ENERGY_COLUMNS = [
     "recorded_at",
-    "current_a",
-    "apparent_power_va",
-    "real_power_w",
-    "interval_energy_wh",
-    "total_energy_kwh"
+    "vibration_pulse_count",
+    "vibration_active_ms",
+    "vibration_activity_percent"
 ].join(",");
 
 const WINDOW_COLUMNS = [
@@ -105,6 +103,7 @@ let refreshTimer = null;
 let refreshInProgress = false;
 let realtimeChannels = [];
 let charts = {};
+let portableAcState = "unknown";
 
 const byId = (id) => document.getElementById(id);
 
@@ -375,52 +374,69 @@ async function fetchLatestEnergy() {
         .from(CONFIG.ENERGY_TABLE)
         .select(ENERGY_COLUMNS)
         .order("recorded_at", { ascending: false })
-        .limit(1);
+        .limit(3);
 
     if (CONFIG.ENERGY_DEVICE_ID) {
         query = query.eq("device_id", CONFIG.ENERGY_DEVICE_ID);
     }
     const { data, error } = await query;
     if (error) throw error;
-    return data?.[0] || null;
+    return data || [];
 }
 
-async function fetchEnergyHistory(hours) {
-    const since = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
-    const pageSize = Math.min(Math.max(Number(CONFIG.PAGE_SIZE) || 1000, 1), 1000);
-    const maxRows = Math.max(Number(CONFIG.MAX_HISTORY_ROWS) || 10000, pageSize);
-    const rows = [];
+function isPortableAcVibration(reading) {
+    const pulseCount = Number(reading?.vibration_pulse_count);
+    const activeDuration = Number(reading?.vibration_active_ms);
+    const activityPercent = Number(reading?.vibration_activity_percent);
 
-    for (let from = 0; from < maxRows; from += pageSize) {
-        let query = client
-            .from(CONFIG.ENERGY_TABLE)
-            .select(ENERGY_COLUMNS)
-            .gte("recorded_at", since)
-            .order("recorded_at", { ascending: true })
-            .range(from, from + pageSize - 1);
+    return Number.isFinite(pulseCount)
+        && Number.isFinite(activeDuration)
+        && Number.isFinite(activityPercent)
+        && pulseCount >= 25
+        && activeDuration >= 30
+        && activityPercent >= 0.10;
+}
 
-        if (CONFIG.ENERGY_DEVICE_ID) {
-            query = query.eq("device_id", CONFIG.ENERGY_DEVICE_ID);
-        }
-        const { data, error } = await query;
-        if (error) throw error;
-        rows.push(...(data || []));
-        if (!data || data.length < pageSize) break;
+function setAcCardState(prefix, state, detail) {
+    const badge = byId(`${prefix}-status`);
+    if (badge) {
+        badge.textContent = state === "on"
+            ? "ON"
+            : state === "off"
+                ? "OFF"
+                : "NO DATA";
+        badge.className = `large-badge ac-status ${state}`;
     }
-    return rows;
+    setText(`${prefix}-detail`, detail);
 }
 
-function updateLatestEnergy(reading) {
-    if (!reading) {
-        setText("energy-time", "No energy data available");
+function updateLatestEnergy(readings) {
+    if (!readings?.length) {
+        setText("energy-time", "No vibration data available");
+        setAcCardState("portable-ac", "unknown", "Waiting for the vibration sensor");
+        setAcCardState("ducted-ac", "unknown", "Sensor not connected yet");
         return;
     }
-    setText("energy-current", formatNumber(reading.current_a, 2));
-    setText("energy-real-power", formatNumber(reading.real_power_w, 1));
-    setText("energy-apparent-power", formatNumber(reading.apparent_power_va, 1));
-    setText("energy-interval", formatNumber(reading.interval_energy_wh, 3));
-    setText("energy-total", formatNumber(reading.total_energy_kwh, 3));
-    setText("energy-time", `Latest measurement: ${formatDateTime(reading.recorded_at)}`);
+
+    const latest = readings[0];
+    const latestAgeMs = Date.now() - new Date(latest.recorded_at).getTime();
+    const dataIsFresh = Number.isFinite(latestAgeMs) && latestAgeMs <= 120000;
+
+    if (!dataIsFresh) {
+        setAcCardState("portable-ac", "unknown", "Vibration data is more than 2 minutes old");
+    } else {
+        const activeCount = readings.filter(isPortableAcVibration).length;
+        if (activeCount >= 2) portableAcState = "on";
+        else if (activeCount === 0) portableAcState = "off";
+        setAcCardState(
+            "portable-ac",
+            portableAcState,
+            `${formatNumber(latest.vibration_activity_percent, 2)}% activity · ${formatNumber(latest.vibration_pulse_count, 0)} pulses`
+        );
+    }
+
+    setAcCardState("ducted-ac", "unknown", "Sensor not connected yet");
+    setText("energy-time", `Latest vibration measurement: ${formatDateTime(latest.recorded_at)}`);
 }
 
 async function fetchWindowSummary() {
@@ -1131,7 +1147,6 @@ async function refreshDashboard() {
             fetchLatestOutdoorWeather(),
             fetchOutdoorWeatherHistory(hours),
             fetchLatestEnergy(),
-            fetchEnergyHistory(hours),
             fetchWindowSummary(),
             fetchWindowHistory(hours),
             fetchPendingEma(),
@@ -1144,7 +1159,6 @@ async function refreshDashboard() {
             latestOutdoorResult,
             outdoorHistoryResult,
             latestEnergyResult,
-            energyHistoryResult,
             windowSummaryResult,
             windowHistoryResult,
             pendingEmaResult,
@@ -1180,9 +1194,6 @@ async function refreshDashboard() {
 
         if (latestEnergyResult.status === "fulfilled") updateLatestEnergy(latestEnergyResult.value);
         else console.error("Latest energy refresh failed:", latestEnergyResult.reason);
-
-        if (energyHistoryResult.status === "fulfilled") updateEnergyCharts(energyHistoryResult.value, hours);
-        else console.error("Energy history refresh failed:", energyHistoryResult.reason);
 
         if (windowHistoryResult.status === "fulfilled") updateWindowChart(windowHistoryResult.value, hours);
         else console.error("Window history refresh failed:", windowHistoryResult.reason);
