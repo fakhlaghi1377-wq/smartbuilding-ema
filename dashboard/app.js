@@ -544,19 +544,41 @@ async function fetchWindowSummary() {
 
 async function fetchWindowHistory(hours) {
     const since = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
-    let query = client
+    let historyQuery = client
         .from(CONFIG.WINDOW_TABLE)
         .select("recorded_at,window_state,is_transition")
         .eq("is_transition", true)
         .gte("recorded_at", since)
         .order("recorded_at", { ascending: true })
         .limit(5000);
+    let previousStateQuery = client
+        .from(CONFIG.WINDOW_TABLE)
+        .select("recorded_at,window_state,is_transition")
+        .eq("is_transition", true)
+        .lt("recorded_at", since)
+        .order("recorded_at", { ascending: false })
+        .limit(1);
     if (CONFIG.WINDOW_DEVICE_ID) {
-        query = query.eq("device_id", CONFIG.WINDOW_DEVICE_ID);
+        historyQuery = historyQuery.eq("device_id", CONFIG.WINDOW_DEVICE_ID);
+        previousStateQuery = previousStateQuery.eq("device_id", CONFIG.WINDOW_DEVICE_ID);
     }
-    const { data, error } = await query;
-    if (error) throw error;
-    return data || [];
+    const [historyResult, previousStateResult] = await Promise.all([
+        historyQuery,
+        previousStateQuery
+    ]);
+    if (historyResult.error) throw historyResult.error;
+    if (previousStateResult.error) throw previousStateResult.error;
+
+    const rows = historyResult.data || [];
+    const previousState = previousStateResult.data?.[0];
+    if (previousState) {
+        rows.unshift({
+            ...previousState,
+            recorded_at: since,
+            _chartBoundary: true
+        });
+    }
+    return rows;
 }
 
 async function fetchPendingEma() {
@@ -1142,7 +1164,7 @@ function updateWindowChart(rows, historyHours) {
     }
     setText(
         "window-history-summary",
-        `${rows.length.toLocaleString()} transition events`
+        `${rows.filter((row) => !row._chartBoundary).length.toLocaleString()} transition events`
     );
 }
 
