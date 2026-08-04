@@ -7,6 +7,7 @@ const requiredConfig = [
     "ENVIRONMENT_TABLE",
     "OUTDOOR_WEATHER_TABLE",
     "ENERGY_TABLE",
+    "APPLIANCE_EVENTS_TABLE",
     "WINDOW_TABLE",
     "WINDOW_IMAGE_BUCKET",
     "SURVEY_EVENTS_TABLE",
@@ -412,6 +413,52 @@ async function fetchEnergyHistory(hours) {
         if (!data || data.length < pageSize) break;
     }
     return rows;
+}
+
+async function fetchLatestFridgeEvent() {
+    const { data, error } = await client
+        .from(CONFIG.APPLIANCE_EVENTS_TABLE)
+        .select("id,action,current_delta_a,event_started_at,confirmed_at,confidence")
+        .eq("appliance_type", "FRIDGE")
+        .eq("status", "CONFIRMED")
+        .order("event_started_at", { ascending: false })
+        .limit(1);
+
+    if (error) throw error;
+    return data?.[0] || null;
+}
+
+function updateFridgeCard(event) {
+    const badge = byId("fridge-badge");
+    if (!badge) return;
+
+    if (!event) {
+        badge.textContent = "NO DATA";
+        badge.className = "large-badge neutral";
+        setText("fridge-details", "No confirmed refrigerator event yet");
+        return;
+    }
+
+    const action = String(event.action || "").toUpperCase();
+    const delta = Number(event.current_delta_a);
+    const isOn = action === "INCREASE" || (action !== "DECREASE" && delta > 0);
+    const isOff = action === "DECREASE" || (action !== "INCREASE" && delta < 0);
+
+    if (isOn) {
+        badge.textContent = "ON";
+        badge.className = "large-badge success";
+    } else if (isOff) {
+        badge.textContent = "OFF";
+        badge.className = "large-badge cooling-off";
+    } else {
+        badge.textContent = "UNKNOWN";
+        badge.className = "large-badge neutral";
+    }
+
+    setText(
+        "fridge-details",
+        `Latest confirmed event: ${formatDateTime(event.event_started_at)}`
+    );
 }
 
 function updateLatestEnergy(reading) {
@@ -1221,6 +1268,7 @@ async function refreshDashboard() {
             fetchOutdoorWeatherHistory(hours),
             fetchLatestEnergy(),
             fetchEnergyHistory(hours),
+            fetchLatestFridgeEvent(),
             fetchWindowSummary(),
             fetchWindowHistory(hours),
             fetchPendingEma(),
@@ -1234,6 +1282,7 @@ async function refreshDashboard() {
             outdoorHistoryResult,
             latestEnergyResult,
             energyHistoryResult,
+            latestFridgeResult,
             windowSummaryResult,
             windowHistoryResult,
             pendingEmaResult,
@@ -1275,6 +1324,9 @@ async function refreshDashboard() {
             updateCoolingCards(energyHistoryResult.value);
         }
         else console.error("Energy history refresh failed:", energyHistoryResult.reason);
+
+        if (latestFridgeResult.status === "fulfilled") updateFridgeCard(latestFridgeResult.value);
+        else console.error("Refrigerator status refresh failed:", latestFridgeResult.reason);
 
         if (windowHistoryResult.status === "fulfilled") updateWindowChart(windowHistoryResult.value, hours);
         else console.error("Window history refresh failed:", windowHistoryResult.reason);
@@ -1353,6 +1405,26 @@ function startDashboard() {
         });
 
     realtimeChannels.push(surveyChannel);
+
+    const applianceChannel = client
+        .channel("dashboard-appliance-events")
+        .on(
+            "postgres_changes",
+            {
+                event: "*",
+                schema: "public",
+                table: CONFIG.APPLIANCE_EVENTS_TABLE,
+                filter: "appliance_type=eq.FRIDGE"
+            },
+            () => refreshDashboard()
+        )
+        .subscribe((status) => {
+            if (status === "CHANNEL_ERROR") {
+                console.warn("Appliance Realtime unavailable; polling remains active.");
+            }
+        });
+
+    realtimeChannels.push(applianceChannel);
 }
 
 function renderSession(newSession) {

@@ -11,6 +11,7 @@ window.SMART_BUILDING_CONFIG = Object.freeze({
     OUTDOOR_WEATHER_TABLE: "outdoor_weather_backup",
     ENERGY_TABLE: "energy_measurements",
     ENERGY_DEVICE_ID: "ESP32_CT_01",
+    APPLIANCE_EVENTS_TABLE: "appliance_detection_events",
     WINDOW_TABLE: "window_events",
     WINDOW_DEVICE_ID: "ESP32_CAM_01",
     WINDOW_IMAGE_BUCKET: "window-images",
