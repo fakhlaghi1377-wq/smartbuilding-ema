@@ -195,6 +195,7 @@ button:disabled { cursor: wait; opacity: .65; }
 .charts-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
 .chart-card.full-width { grid-column: 1 / -1; }
 .chart-container { position: relative; height: 310px; }
+.chart-container.appliance-state-chart { height: 230px; }
 
 .window-layout {
     display: grid;

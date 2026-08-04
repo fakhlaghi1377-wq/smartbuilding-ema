@@ -428,6 +428,36 @@ async function fetchLatestFridgeEvent() {
     return data?.[0] || null;
 }
 
+async function fetchFridgeHistory(hours) {
+    const since = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
+    const columns = "id,action,current_delta_a,event_started_at,confirmed_at,confidence";
+    const baseQuery = () => client
+        .from(CONFIG.APPLIANCE_EVENTS_TABLE)
+        .select(columns)
+        .eq("appliance_type", "FRIDGE")
+        .eq("status", "CONFIRMED");
+
+    const [historyResult, previousResult] = await Promise.all([
+        baseQuery()
+            .gte("event_started_at", since)
+            .order("event_started_at", { ascending: true })
+            .limit(5000),
+        baseQuery()
+            .lt("event_started_at", since)
+            .order("event_started_at", { ascending: false })
+            .limit(1)
+    ]);
+    if (historyResult.error) throw historyResult.error;
+    if (previousResult.error) throw previousResult.error;
+
+    const rows = historyResult.data || [];
+    const previous = previousResult.data?.[0];
+    if (previous) {
+        rows.unshift({ ...previous, event_started_at: since, _chartBoundary: true });
+    }
+    return rows;
+}
+
 function updateFridgeCard(event) {
     const badge = byId("fridge-badge");
     if (!badge) return;
@@ -1149,6 +1179,130 @@ function updateEnergyCharts(rawRows, historyHours) {
     );
 }
 
+function eventMeansOn(event) {
+    const action = String(event?.action || "").toUpperCase();
+    const delta = Number(event?.current_delta_a);
+    if (action === "INCREASE") return true;
+    if (action === "DECREASE") return false;
+    if (Number.isFinite(delta)) return delta > 0;
+    return null;
+}
+
+function applianceStateChart(name, canvasId, points, historyHours, color, label) {
+    destroyChart(name);
+    const canvas = byId(canvasId);
+    if (!canvas) return;
+
+    const now = Date.now();
+    const start = now - historyHours * 60 * 60 * 1000;
+    const validPoints = points.filter((point) =>
+        Number.isFinite(point.x) && (point.y === 0 || point.y === 1)
+    );
+    if (validPoints.length) {
+        const latest = validPoints[validPoints.length - 1];
+        validPoints.push({ x: now, y: latest.y });
+    }
+
+    charts[name] = new Chart(canvas, {
+        type: "line",
+        data: { datasets: [{
+            label,
+            data: validPoints,
+            borderColor: color,
+            backgroundColor: `${color}22`,
+            borderWidth: 2,
+            pointRadius: 2,
+            stepped: true,
+            spanGaps: false
+        }] },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: false,
+            parsing: false,
+            interaction: { mode: "nearest", intersect: false },
+            plugins: {
+                legend: { position: "bottom" },
+                tooltip: { callbacks: {
+                    title: (items) => items.length ? formatDateTime(items[0].parsed.x) : "",
+                    label: (item) => item.parsed.y === 1 ? "On" : "Off"
+                }}
+            },
+            scales: {
+                x: {
+                    type: "linear",
+                    min: start,
+                    max: now,
+                    ticks: {
+                        maxTicksLimit: 10,
+                        maxRotation: 0,
+                        callback: (value) => formatChartTime(value, historyHours)
+                    }
+                },
+                y: {
+                    min: 0,
+                    max: 1,
+                    ticks: {
+                        stepSize: 1,
+                        callback: (value) => value === 1 ? "On" : "Off"
+                    }
+                }
+            }
+        }
+    });
+}
+
+function updateFridgeHistoryChart(rows, historyHours) {
+    applianceStateChart(
+        "fridgeState",
+        "fridge-state-chart",
+        (rows || []).map((row) => ({
+            x: new Date(row.event_started_at).getTime(),
+            y: eventMeansOn(row) === true ? 1 : eventMeansOn(row) === false ? 0 : null
+        })),
+        historyHours,
+        "#2563eb",
+        "Refrigerator"
+    );
+}
+
+function updatePortableAcHistoryChart(rows, historyHours) {
+    const ordered = [...(rows || [])]
+        .filter((row) => Number.isFinite(new Date(row?.recorded_at).getTime()))
+        .sort((a, b) => new Date(a.recorded_at) - new Date(b.recorded_at));
+    const points = [];
+    let state = null;
+
+    for (let index = 0; index < ordered.length; index += 1) {
+        const sample = ordered[index];
+        const windowRows = ordered.slice(Math.max(0, index - 2), index + 1);
+        const activeCount = windowRows.filter((row) =>
+            isPortableAcVibrationActive(row) || isPortableAcPowerActive(row)
+        ).length;
+        const offCount = windowRows.filter(isPortableAcOffEvidence).length;
+        let nextState = state;
+        if (windowRows.length >= 2 && activeCount >= 2) nextState = true;
+        else if (windowRows.length === 3 && offCount === 3) nextState = false;
+
+        if (nextState !== null && (points.length === 0 || nextState !== state)) {
+            points.push({
+                x: new Date(sample.recorded_at).getTime(),
+                y: nextState ? 1 : 0
+            });
+        }
+        state = nextState;
+    }
+
+    applianceStateChart(
+        "portableAcState",
+        "portable-ac-state-chart",
+        points,
+        historyHours,
+        "#0ea5e9",
+        "Portable Air Conditioner"
+    );
+}
+
 function updateWindowChart(rows, historyHours) {
     const chartRows = [...rows];
     const latest = chartRows[chartRows.length - 1];
@@ -1269,6 +1423,7 @@ async function refreshDashboard() {
             fetchLatestEnergy(),
             fetchEnergyHistory(hours),
             fetchLatestFridgeEvent(),
+            fetchFridgeHistory(hours),
             fetchWindowSummary(),
             fetchWindowHistory(hours),
             fetchPendingEma(),
@@ -1283,6 +1438,7 @@ async function refreshDashboard() {
             latestEnergyResult,
             energyHistoryResult,
             latestFridgeResult,
+            fridgeHistoryResult,
             windowSummaryResult,
             windowHistoryResult,
             pendingEmaResult,
@@ -1322,11 +1478,15 @@ async function refreshDashboard() {
         if (energyHistoryResult.status === "fulfilled") {
             updateEnergyCharts(energyHistoryResult.value, hours);
             updateCoolingCards(energyHistoryResult.value);
+            updatePortableAcHistoryChart(energyHistoryResult.value, hours);
         }
         else console.error("Energy history refresh failed:", energyHistoryResult.reason);
 
         if (latestFridgeResult.status === "fulfilled") updateFridgeCard(latestFridgeResult.value);
         else console.error("Refrigerator status refresh failed:", latestFridgeResult.reason);
+
+        if (fridgeHistoryResult.status === "fulfilled") updateFridgeHistoryChart(fridgeHistoryResult.value, hours);
+        else console.error("Refrigerator history refresh failed:", fridgeHistoryResult.reason);
 
         if (windowHistoryResult.status === "fulfilled") updateWindowChart(windowHistoryResult.value, hours);
         else console.error("Window history refresh failed:", windowHistoryResult.reason);
