@@ -70,7 +70,8 @@ const ENERGY_COLUMNS = [
     "total_energy_kwh",
     "vibration_pulse_count",
     "vibration_active_ms",
-    "vibration_activity_percent"
+    "vibration_activity_percent",
+    "vibration_active"
 ].join(",");
 
 const WINDOW_COLUMNS = [
@@ -505,11 +506,16 @@ function updateLatestEnergy(reading) {
 }
 
 function isPortableAcVibrationActive(reading) {
-    const pulses = Number(reading?.vibration_pulse_count);
     const activeMs = Number(reading?.vibration_active_ms);
     const activityPercent = Number(reading?.vibration_activity_percent);
-    return Number.isFinite(pulses) && Number.isFinite(activeMs) && Number.isFinite(activityPercent)
-        && pulses >= 25 && activeMs >= 30 && activityPercent >= 0.10;
+    const vibrationActive = reading?.vibration_active === true
+        || String(reading?.vibration_active).toLowerCase() === "true";
+
+    // Continuous vibration may keep the sensor active without producing new
+    // pulse edges, so pulse_count must not be required for an ON decision.
+    return vibrationActive
+        || (Number.isFinite(activeMs) && activeMs >= 3000)
+        || (Number.isFinite(activityPercent) && activityPercent >= 10);
 }
 
 function isPortableAcPowerActive(reading) {
@@ -533,14 +539,17 @@ function updateCoolingCards(rows) {
     if (!badge) return;
 
     const latest = recent[0];
-    const latestAgeMs = latest ? Date.now() - new Date(latest.recorded_at).getTime() : Infinity;
-    if (!latest || !Number.isFinite(latestAgeMs) || latestAgeMs > 2 * 60 * 1000) {
+    if (!latest) {
         portableAcState = null;
         badge.textContent = "NO DATA";
         badge.className = "large-badge neutral";
-        setText("portable-ac-details", "No recent vibration data");
+        setText("portable-ac-details", "No energy or vibration data available");
         return;
     }
+
+    const latestTimeMs = new Date(latest.recorded_at).getTime();
+    const latestAgeMs = Date.now() - latestTimeMs;
+    const isStale = !Number.isFinite(latestAgeMs) || latestAgeMs > 2 * 60 * 1000;
 
     // The vibration sensor can become weak depending on its mounting position.
     // Accept either strong vibration or the portable AC power band as ON evidence.
@@ -563,7 +572,7 @@ function updateCoolingCards(rows) {
     }
     setText(
         "portable-ac-details",
-        `Vibration: ${Number(latest.vibration_pulse_count) || 0} pulses · ${formatNumber(latest.vibration_activity_percent, 2)}% · Power: ${formatNumber(latest.real_power_w, 1)} W`
+        `Vibration: ${Number(latest.vibration_pulse_count) || 0} pulses · ${formatNumber(latest.vibration_activity_percent, 2)}% · Power: ${formatNumber(latest.real_power_w, 1)} W${isStale ? ` · STALE DATA (${formatDateTime(latest.recorded_at)})` : ""}`
     );
 }
 
