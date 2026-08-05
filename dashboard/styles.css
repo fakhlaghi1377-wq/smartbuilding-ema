@@ -190,12 +190,18 @@ button:disabled { cursor: wait; opacity: .65; }
 .large-badge.neutral { color: #475569; background: var(--neutral-bg); }
 .large-badge.cooling-off { color: #475569; background: #e2e8f0; }
 .cooling-card { border-top-color: #0ea5e9 !important; }
+.prediction-card { border-top-color: #8b5cf6 !important; }
+.fridge-prediction-card { border-top-color: #f59e0b !important; }
 
 .charts-heading { margin-top: 42px; }
 .charts-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
 .chart-card.full-width { grid-column: 1 / -1; }
 .chart-container { position: relative; height: 310px; }
 .chart-container.appliance-state-chart { height: 230px; }
+.appliance-history-grid .appliance-history-card { grid-column: auto; }
+.appliance-history-grid .appliance-history-card:nth-last-child(3) {
+    grid-column: 1 / -1;
+}
 
 .window-layout {
     display: grid;

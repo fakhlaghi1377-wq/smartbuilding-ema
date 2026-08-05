@@ -71,7 +71,11 @@ const ENERGY_COLUMNS = [
     "vibration_pulse_count",
     "vibration_active_ms",
     "vibration_activity_percent",
-    "vibration_active"
+    "vibration_active",
+    "portable_ac_predicted_on",
+    "fridge_on",
+    "appliance_prediction_confidence",
+    "appliance_prediction_stage"
 ].join(",");
 
 const WINDOW_COLUMNS = [
@@ -511,6 +515,56 @@ function updateCoolingCards(rows) {
     setText(
         "portable-ac-details",
         `Vibration: ${Number(latest.vibration_pulse_count) || 0} pulses · ${formatNumber(latest.vibration_activity_percent, 2)}%${isStale ? ` · Latest sample: ${formatDateTime(latest.recorded_at)}` : ""}`
+    );
+}
+
+function setPredictionCard(badgeId, detailsId, value, detail) {
+    const badge = byId(badgeId);
+    if (!badge) return;
+    if (value === true) {
+        badge.textContent = "ON";
+        badge.className = "large-badge success";
+    } else if (value === false) {
+        badge.textContent = "OFF";
+        badge.className = "large-badge cooling-off";
+    } else {
+        badge.textContent = "NO DATA";
+        badge.className = "large-badge neutral";
+    }
+    setText(detailsId, detail);
+}
+
+function updatePredictionCards(rows) {
+    const latest = [...(rows || [])]
+        .filter((row) => row?.recorded_at)
+        .sort((a, b) => new Date(b.recorded_at) - new Date(a.recorded_at))[0];
+
+    if (!latest) {
+        setPredictionCard("portable-ac-prediction-badge", "portable-ac-prediction-details", null, "No prediction data available");
+        setPredictionCard("fridge-prediction-badge", "fridge-prediction-details", null, "No prediction data available");
+        return;
+    }
+
+    const confidence = Number(latest.appliance_prediction_confidence);
+    const confidenceText = Number.isFinite(confidence)
+        ? ` · Confidence: ${formatNumber(confidence, 2)}`
+        : "";
+    const stageText = latest.appliance_prediction_stage
+        ? ` · ${latest.appliance_prediction_stage}`
+        : "";
+    const timeText = `Latest: ${formatDateTime(latest.recorded_at)}`;
+
+    setPredictionCard(
+        "portable-ac-prediction-badge",
+        "portable-ac-prediction-details",
+        latest.portable_ac_predicted_on,
+        `${timeText}${confidenceText}${stageText}`
+    );
+    setPredictionCard(
+        "fridge-prediction-badge",
+        "fridge-prediction-details",
+        latest.fridge_on,
+        `${timeText}${confidenceText}${stageText}`
     );
 }
 
@@ -1239,6 +1293,32 @@ function updatePortableAcHistoryChart(rows, historyHours) {
     );
 }
 
+function updateStoredStateHistoryChart(rows, historyHours, field, chartName, canvasId, color, label) {
+    const points = [...(rows || [])]
+        .filter((row) => Number.isFinite(new Date(row?.recorded_at).getTime()))
+        .sort((a, b) => new Date(a.recorded_at) - new Date(b.recorded_at))
+        .filter((row) => row[field] === true || row[field] === false)
+        .map((row) => ({
+            x: new Date(row.recorded_at).getTime(),
+            y: row[field] ? 1 : 0
+        }));
+
+    applianceStateChart(chartName, canvasId, points, historyHours, color, label);
+}
+
+function updatePredictionHistoryCharts(rows, historyHours) {
+    updateStoredStateHistoryChart(
+        rows, historyHours, "portable_ac_predicted_on",
+        "portableAcPrediction", "portable-ac-prediction-chart",
+        "#8b5cf6", "Portable AC Prediction"
+    );
+    updateStoredStateHistoryChart(
+        rows, historyHours, "fridge_on",
+        "fridgePrediction", "fridge-prediction-chart",
+        "#f59e0b", "Refrigerator Prediction"
+    );
+}
+
 function updateWindowChart(rows, historyHours) {
     const chartRows = [...rows];
     const latest = chartRows[chartRows.length - 1];
@@ -1410,7 +1490,9 @@ async function refreshDashboard() {
         if (energyHistoryResult.status === "fulfilled") {
             updateEnergyCharts(energyHistoryResult.value, hours);
             updateCoolingCards(energyHistoryResult.value);
+            updatePredictionCards(energyHistoryResult.value);
             updatePortableAcHistoryChart(energyHistoryResult.value, hours);
+            updatePredictionHistoryCharts(energyHistoryResult.value, hours);
         }
         else console.error("Energy history refresh failed:", energyHistoryResult.reason);
 
