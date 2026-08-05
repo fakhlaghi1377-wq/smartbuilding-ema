@@ -112,6 +112,13 @@ let realtimeChannels = [];
 let charts = {};
 let portableAcState = null;
 
+// Portable AC detection uses vibration only. Whole-home current and power are
+// intentionally excluded because unrelated appliances change those values.
+const PORTABLE_AC_MIN_PULSES = 30;
+const PORTABLE_AC_MIN_ACTIVITY_PERCENT = 0.05;
+const PORTABLE_AC_ON_CONFIRM_SAMPLES = 2;
+const PORTABLE_AC_OFF_CONFIRM_SAMPLES = 3;
+
 const byId = (id) => document.getElementById(id);
 
 const DASHBOARD_PAGES = new Set(["environment", "outdoor", "energy", "window", "surveys"]);
@@ -506,27 +513,27 @@ function updateLatestEnergy(reading) {
 }
 
 function isPortableAcVibrationActive(reading) {
-    const activeMs = Number(reading?.vibration_active_ms);
+    const pulseCount = Number(reading?.vibration_pulse_count);
     const activityPercent = Number(reading?.vibration_activity_percent);
-    const vibrationActive = reading?.vibration_active === true
-        || String(reading?.vibration_active).toLowerCase() === "true";
 
-    // Continuous vibration may keep the sensor active without producing new
-    // pulse edges, so pulse_count must not be required for an ON decision.
-    return vibrationActive
-        || (Number.isFinite(activeMs) && activeMs >= 3000)
-        || (Number.isFinite(activityPercent) && activityPercent >= 10);
+    // The two conditions are alternatives: pulsed vibration can have a low
+    // activity percentage, while continuous vibration can have zero new edges.
+    return (Number.isFinite(pulseCount) && pulseCount >= PORTABLE_AC_MIN_PULSES)
+        || (Number.isFinite(activityPercent)
+            && activityPercent >= PORTABLE_AC_MIN_ACTIVITY_PERCENT);
 }
 
-function isPortableAcPowerActive(reading) {
-    const realPower = Number(reading?.real_power_w);
-    return Number.isFinite(realPower) && realPower >= 200;
+function hasPortableAcVibrationData(reading) {
+    const pulseCount = reading?.vibration_pulse_count;
+    const activityPercent = reading?.vibration_activity_percent;
+    return (pulseCount !== null && pulseCount !== undefined && pulseCount !== ""
+            && Number.isFinite(Number(pulseCount)))
+        || (activityPercent !== null && activityPercent !== undefined
+            && activityPercent !== "" && Number.isFinite(Number(activityPercent)));
 }
 
 function isPortableAcOffEvidence(reading) {
-    const realPower = Number(reading?.real_power_w);
-    return Number.isFinite(realPower)
-        && realPower <= 170
+    return hasPortableAcVibrationData(reading)
         && !isPortableAcVibrationActive(reading);
 }
 
@@ -551,16 +558,23 @@ function updateCoolingCards(rows) {
     const latestAgeMs = Date.now() - latestTimeMs;
     const isStale = !Number.isFinite(latestAgeMs) || latestAgeMs > 2 * 60 * 1000;
 
-    // The vibration sensor can become weak depending on its mounting position.
-    // Accept either strong vibration or the portable AC power band as ON evidence.
-    const activeCount = recent.filter((row) =>
-        isPortableAcVibrationActive(row) || isPortableAcPowerActive(row)
-    ).length;
-    const offCount = recent.filter(isPortableAcOffEvidence).length;
-    if (recent.length >= 2 && activeCount >= 2) portableAcState = true;
-    else if (recent.length === 3 && offCount === 3) portableAcState = false;
+    // Confirm only consecutive newest samples. This prevents a sequence such
+    // as vibration / no vibration / vibration from being treated as two
+    // consecutive ON samples.
+    const newestOnSamples = recent.slice(0, PORTABLE_AC_ON_CONFIRM_SAMPLES);
+    const newestOffSamples = recent.slice(0, PORTABLE_AC_OFF_CONFIRM_SAMPLES);
+    if (newestOnSamples.length === PORTABLE_AC_ON_CONFIRM_SAMPLES
+        && newestOnSamples.every(isPortableAcVibrationActive)) {
+        portableAcState = true;
+    } else if (newestOffSamples.length === PORTABLE_AC_OFF_CONFIRM_SAMPLES
+        && newestOffSamples.every(isPortableAcOffEvidence)) {
+        portableAcState = false;
+    }
 
-    if (portableAcState === true) {
+    if (isStale) {
+        badge.textContent = "STALE DATA";
+        badge.className = "large-badge neutral";
+    } else if (portableAcState === true) {
         badge.textContent = "ON";
         badge.className = "large-badge success";
     } else if (portableAcState === false) {
@@ -572,7 +586,7 @@ function updateCoolingCards(rows) {
     }
     setText(
         "portable-ac-details",
-        `Vibration: ${Number(latest.vibration_pulse_count) || 0} pulses · ${formatNumber(latest.vibration_activity_percent, 2)}% · Power: ${formatNumber(latest.real_power_w, 1)} W${isStale ? ` · STALE DATA (${formatDateTime(latest.recorded_at)})` : ""}`
+        `Vibration: ${Number(latest.vibration_pulse_count) || 0} pulses · ${formatNumber(latest.vibration_activity_percent, 2)}%${isStale ? ` · Latest sample: ${formatDateTime(latest.recorded_at)}` : ""}`
     );
 }
 
@@ -1285,13 +1299,16 @@ function updatePortableAcHistoryChart(rows, historyHours) {
     for (let index = 0; index < ordered.length; index += 1) {
         const sample = ordered[index];
         const windowRows = ordered.slice(Math.max(0, index - 2), index + 1);
-        const activeCount = windowRows.filter((row) =>
-            isPortableAcVibrationActive(row) || isPortableAcPowerActive(row)
-        ).length;
-        const offCount = windowRows.filter(isPortableAcOffEvidence).length;
+        const newestOnSamples = windowRows.slice(-PORTABLE_AC_ON_CONFIRM_SAMPLES);
+        const newestOffSamples = windowRows.slice(-PORTABLE_AC_OFF_CONFIRM_SAMPLES);
         let nextState = state;
-        if (windowRows.length >= 2 && activeCount >= 2) nextState = true;
-        else if (windowRows.length === 3 && offCount === 3) nextState = false;
+        if (newestOnSamples.length === PORTABLE_AC_ON_CONFIRM_SAMPLES
+            && newestOnSamples.every(isPortableAcVibrationActive)) {
+            nextState = true;
+        } else if (newestOffSamples.length === PORTABLE_AC_OFF_CONFIRM_SAMPLES
+            && newestOffSamples.every(isPortableAcOffEvidence)) {
+            nextState = false;
+        }
 
         if (nextState !== null && (points.length === 0 || nextState !== state)) {
             points.push({
