@@ -72,6 +72,7 @@ const ENERGY_COLUMNS = [
     "vibration_active_ms",
     "vibration_activity_percent",
     "vibration_active",
+    "portable_ac_on",
     "portable_ac_predicted_on",
     "fridge_on",
     "appliance_prediction_confidence",
@@ -114,14 +115,6 @@ let refreshTimer = null;
 let refreshInProgress = false;
 let realtimeChannels = [];
 let charts = {};
-let portableAcState = null;
-
-// Portable AC detection uses vibration only. Whole-home current and power are
-// intentionally excluded because unrelated appliances change those values.
-const PORTABLE_AC_MIN_PULSES = 30;
-const PORTABLE_AC_MIN_ACTIVITY_PERCENT = 0.05;
-const PORTABLE_AC_ON_CONFIRM_SAMPLES = 2;
-const PORTABLE_AC_OFF_CONFIRM_SAMPLES = 3;
 
 const byId = (id) => document.getElementById(id);
 
@@ -440,42 +433,16 @@ function updateLatestEnergy(reading) {
     setText("energy-time", `Latest measurement: ${formatDateTime(reading.recorded_at)}`);
 }
 
-function isPortableAcVibrationActive(reading) {
-    const pulseCount = Number(reading?.vibration_pulse_count);
-    const activityPercent = Number(reading?.vibration_activity_percent);
-
-    // The two conditions are alternatives: pulsed vibration can have a low
-    // activity percentage, while continuous vibration can have zero new edges.
-    return (Number.isFinite(pulseCount) && pulseCount >= PORTABLE_AC_MIN_PULSES)
-        || (Number.isFinite(activityPercent)
-            && activityPercent >= PORTABLE_AC_MIN_ACTIVITY_PERCENT);
-}
-
-function hasPortableAcVibrationData(reading) {
-    const pulseCount = reading?.vibration_pulse_count;
-    const activityPercent = reading?.vibration_activity_percent;
-    return (pulseCount !== null && pulseCount !== undefined && pulseCount !== ""
-            && Number.isFinite(Number(pulseCount)))
-        || (activityPercent !== null && activityPercent !== undefined
-            && activityPercent !== "" && Number.isFinite(Number(activityPercent)));
-}
-
-function isPortableAcOffEvidence(reading) {
-    return hasPortableAcVibrationData(reading)
-        && !isPortableAcVibrationActive(reading);
-}
-
 function updateCoolingCards(rows) {
     const recent = [...(rows || [])]
         .filter((row) => row?.recorded_at)
         .sort((a, b) => new Date(b.recorded_at) - new Date(a.recorded_at))
-        .slice(0, 3);
+        .slice(0, 1);
     const badge = byId("portable-ac-badge");
     if (!badge) return;
 
     const latest = recent[0];
     if (!latest) {
-        portableAcState = null;
         badge.textContent = "NO DATA";
         badge.className = "large-badge neutral";
         setText("portable-ac-details", "No energy or vibration data available");
@@ -486,30 +453,17 @@ function updateCoolingCards(rows) {
     const latestAgeMs = Date.now() - latestTimeMs;
     const isStale = !Number.isFinite(latestAgeMs) || latestAgeMs > 2 * 60 * 1000;
 
-    // Confirm only consecutive newest samples. This prevents a sequence such
-    // as vibration / no vibration / vibration from being treated as two
-    // consecutive ON samples.
-    const newestOnSamples = recent.slice(0, PORTABLE_AC_ON_CONFIRM_SAMPLES);
-    const newestOffSamples = recent.slice(0, PORTABLE_AC_OFF_CONFIRM_SAMPLES);
-    if (newestOnSamples.length === PORTABLE_AC_ON_CONFIRM_SAMPLES
-        && newestOnSamples.every(isPortableAcVibrationActive)) {
-        portableAcState = true;
-    } else if (newestOffSamples.length === PORTABLE_AC_OFF_CONFIRM_SAMPLES
-        && newestOffSamples.every(isPortableAcOffEvidence)) {
-        portableAcState = false;
-    }
-
     if (isStale) {
         badge.textContent = "STALE DATA";
         badge.className = "large-badge neutral";
-    } else if (portableAcState === true) {
+    } else if (latest.portable_ac_on === true) {
         badge.textContent = "ON";
         badge.className = "large-badge success";
-    } else if (portableAcState === false) {
+    } else if (latest.portable_ac_on === false) {
         badge.textContent = "OFF";
         badge.className = "large-badge cooling-off";
     } else {
-        badge.textContent = "CHECKING";
+        badge.textContent = "NO SERVER STATUS";
         badge.className = "large-badge neutral";
     }
     setText(
@@ -1254,40 +1208,12 @@ function applianceStateChart(name, canvasId, points, historyHours, color, label)
 }
 
 function updatePortableAcHistoryChart(rows, historyHours) {
-    const ordered = [...(rows || [])]
-        .filter((row) => Number.isFinite(new Date(row?.recorded_at).getTime()))
-        .sort((a, b) => new Date(a.recorded_at) - new Date(b.recorded_at));
-    const points = [];
-    let state = null;
-
-    for (let index = 0; index < ordered.length; index += 1) {
-        const sample = ordered[index];
-        const windowRows = ordered.slice(Math.max(0, index - 2), index + 1);
-        const newestOnSamples = windowRows.slice(-PORTABLE_AC_ON_CONFIRM_SAMPLES);
-        const newestOffSamples = windowRows.slice(-PORTABLE_AC_OFF_CONFIRM_SAMPLES);
-        let nextState = state;
-        if (newestOnSamples.length === PORTABLE_AC_ON_CONFIRM_SAMPLES
-            && newestOnSamples.every(isPortableAcVibrationActive)) {
-            nextState = true;
-        } else if (newestOffSamples.length === PORTABLE_AC_OFF_CONFIRM_SAMPLES
-            && newestOffSamples.every(isPortableAcOffEvidence)) {
-            nextState = false;
-        }
-
-        if (nextState !== null && (points.length === 0 || nextState !== state)) {
-            points.push({
-                x: new Date(sample.recorded_at).getTime(),
-                y: nextState ? 1 : 0
-            });
-        }
-        state = nextState;
-    }
-
-    applianceStateChart(
+    updateStoredStateHistoryChart(
+        rows,
+        historyHours,
+        "portable_ac_on",
         "portableAcState",
         "portable-ac-state-chart",
-        points,
-        historyHours,
         "#0ea5e9",
         "Portable Air Conditioner"
     );
