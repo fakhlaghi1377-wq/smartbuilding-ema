@@ -12,6 +12,7 @@ window.SMART_BUILDING_CONFIG = Object.freeze({
     ENERGY_TABLE: "energy_measurements",
     ENERGY_DEVICE_ID: "ESP32_CT_01",
     APPLIANCE_EVENTS_TABLE: "appliance_detection_events",
+    APPLIANCE_TRAINING_API_URL: "https://rarytoivpexnqfdtebsx.supabase.co/functions/v1/appliance-training",
     WINDOW_TABLE: "window_events",
     WINDOW_DEVICE_ID: "ESP32_CAM_01",
     WINDOW_IMAGE_BUCKET: "window-images",
