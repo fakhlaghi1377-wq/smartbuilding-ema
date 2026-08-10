@@ -1475,6 +1475,15 @@
     $("edit-label-dialog").showModal();
   }
 
+  function apiErrorMessage(payload, fallback) {
+    const detail = payload?.detail ?? payload?.message ?? payload?.error;
+    if (typeof detail === "string" && detail.trim()) return detail;
+    if (detail && typeof detail === "object") {
+      return detail.message || detail.details || JSON.stringify(detail);
+    }
+    return fallback;
+  }
+
   function closeEditDialog() {
     state.editingLabel = null;
     $("edit-label-dialog").close();
@@ -1518,8 +1527,10 @@
           review_target: $("edit-review-target").value,
         }),
       });
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload.detail || "ویرایش پاسخ ناموفق بود");
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(apiErrorMessage(payload, "ویرایش پاسخ ناموفق بود"));
+      }
       closeEditDialog();
       await Promise.all([loadSummary(), loadSampleCounts(), loadFridgeProfile(), loadHistory(), loadPendingEvents(), loadUnansweredEvents(), loadTodayEvents(), loadOpenSessions(), loadCycleVisuals()]);
     } catch (error) {
