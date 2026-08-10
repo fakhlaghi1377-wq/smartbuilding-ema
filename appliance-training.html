@@ -1,0 +1,588 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>آموزش تشخیص وسایل</title>
+  <link rel="stylesheet" href="./appliance-training.css?v=11.0-cloud">
+</head>
+<body>
+  <main class="page-shell">
+    <header class="page-header">
+      <div>
+        <p class="eyebrow">SmartBuildingIoT</p>
+        <h1>آموزش تشخیص وسایل</h1>
+        <p class="subtitle">تشخیص الگوریتم را تأیید یا اصلاح کن تا داده آموزشی ساخته شود.</p>
+      </div>
+      <a class="dashboard-link" href="./index.html">بازگشت به داشبورد</a>
+    </header>
+
+    <section class="summary-grid" aria-label="خلاصه کامل آموزش و بررسی">
+      <article class="summary-card summary-unanswered">
+        <span>پاسخ‌داده‌نشده</span>
+        <strong id="unanswered-summary-count">—</strong>
+        <small>بدون پاسخ انسانی</small>
+      </article>
+
+      <article class="summary-card summary-pending">
+        <span>پندینگ</span>
+        <strong id="pending-summary-count">—</strong>
+        <small>برای بررسی دوباره</small>
+      </article>
+
+      <article class="summary-card summary-unresolved">
+        <span>نامشخص نهایی</span>
+        <strong id="unresolved-summary-count">—</strong>
+        <small>از صف و آموزش خارج‌شده</small>
+      </article>
+
+      <article class="summary-card summary-total-events">
+        <span>مجموع رویدادها</span>
+        <strong id="total-events-count">—</strong>
+        <small>تمام رکوردهای تشخیص وسایل</small>
+      </article>
+
+      <article class="summary-card summary-labeled">
+        <span>برچسب‌خورده</span>
+        <strong id="total-labeled">—</strong>
+        <small>داده آموزشی تأییدشده</small>
+      </article>
+
+      <article class="summary-card summary-correct">
+        <span>درست</span>
+        <strong id="correct-count">—</strong>
+        <small>تشخیص اولیه درست بود</small>
+      </article>
+
+      <article class="summary-card summary-corrected">
+        <span>اصلاح‌شده</span>
+        <strong id="corrected-count">—</strong>
+        <small>تشخیص اولیه اصلاح شد</small>
+      </article>
+
+      <article class="summary-card summary-rule-accuracy">
+        <span>دقت فعلی قواعد</span>
+        <strong id="accuracy">—</strong>
+        <small>درصد صحت قواعد تشخیص</small>
+      </article>
+    </section>
+
+    <section class="training-card dataset-card">
+      <div class="card-toolbar">
+        <div>
+          <h2>نسخه دیتاست آموزشی</h2>
+          <p>
+            داده‌های قدیمی حذف نمی‌شوند؛ با شروع نسخه جدید فقط از آموزش فعال
+            کنار گذاشته و برای مقایسه و مستندسازی نگه‌داری می‌شوند.
+          </p>
+        </div>
+        <button id="start-new-dataset-button"
+                class="primary-button dataset-start-button"
+                type="button">
+          شروع دیتاست آموزشی جدید
+        </button>
+      </div>
+
+      <div class="dataset-status-grid">
+        <div>
+          <span>نسخه فعال</span>
+          <strong id="active-dataset-version">—</strong>
+        </div>
+        <div>
+          <span>برچسب‌های دیتاست فعال</span>
+          <strong id="active-dataset-label-count">—</strong>
+        </div>
+        <div>
+          <span>نسخه‌های آرشیوشده</span>
+          <strong id="archived-dataset-count">—</strong>
+        </div>
+      </div>
+
+      <div class="dataset-switcher">
+        <label>
+          <span>انتخاب نسخه دیتاست</span>
+          <select id="dataset-version-select">
+            <option value="">در حال دریافت نسخه‌ها…</option>
+          </select>
+        </label>
+
+        <button id="activate-dataset-button"
+                class="secondary-button"
+                type="button"
+                disabled>
+          فعال‌کردن این Dataset
+        </button>
+      </div>
+
+      <div id="dataset-version-list"
+           class="dataset-version-list">
+      </div>
+
+      <p id="dataset-message"
+         class="message"
+         role="status">
+      </p>
+    </section>
+
+    <section id="open-cycles-card"
+             class="training-card open-cycles-card"
+             aria-live="polite">
+      <div class="card-toolbar">
+        <div>
+          <h2>
+            چرخه‌های باز وسایل
+            <span id="open-cycles-count-badge"
+                  class="count-badge open-cycle-count">۰</span>
+          </h2>
+          <p id="open-cycles-status">
+            در حال بررسی چرخه‌های بازی که هنوز پایان آن‌ها ثبت نشده است…
+          </p>
+        </div>
+        <button id="refresh-open-cycles-button"
+                class="secondary-button"
+                type="button">
+          به‌روزرسانی چرخه‌ها
+        </button>
+      </div>
+
+      <div id="open-cycles-empty"
+           class="open-cycles-empty"
+           hidden>
+        چرخه بازی وجود ندارد؛ همه چرخه‌ها بسته شده‌اند.
+      </div>
+
+      <div id="open-cycles-list"
+           class="open-cycles-grid">
+      </div>
+
+      <p class="open-cycles-hint">
+        هر وسیله می‌تواند هم‌زمان چرخه مستقل خودش را داشته باشد. وقتی
+        وسیله واقعاً خاموش شد، رویداد مربوط به همان وسیله را با
+        «پایان چرخه باز» ثبت کن.
+      </p>
+    </section>
+
+    <section class="training-card cycle-visual-card">
+      <div class="card-toolbar">
+        <div>
+          <h2>نمایش گرافیکی چرخه‌های وسایل</h2>
+          <p>
+            مراحل افزایش و کاهش جریان، روند تجمعی و مدت هر چرخه را
+            به‌صورت گرافیکی بررسی کن.
+          </p>
+        </div>
+        <div class="cycle-visual-actions">
+          <label>
+            <span>نمایش چرخه‌ها</span>
+            <select id="cycle-visual-filter">
+              <option value="ALL" selected>باز و بسته</option>
+              <option value="OPEN">فقط چرخه‌های باز</option>
+              <option value="CLOSED">فقط چرخه‌های بسته</option>
+            </select>
+          </label>
+          <button id="refresh-cycle-visuals-button"
+                  class="secondary-button"
+                  type="button">
+            به‌روزرسانی نمودارها
+          </button>
+        </div>
+      </div>
+
+      <div id="cycle-visual-empty"
+           class="cycle-visual-empty"
+           hidden>
+        هنوز چرخه‌ای برای نمایش وجود ندارد.
+      </div>
+
+      <div id="cycle-visual-list"
+           class="cycle-visual-list">
+      </div>
+    </section>
+
+    <section class="training-card sample-count-card">
+      <div class="card-toolbar">
+        <div>
+          <h2>تعداد داده‌های آموزشی هر وسیله</h2>
+          <p id="sample-count-readiness">برای هر وسیله تعداد نمونه‌های دو جهت جداگانه محاسبه می‌شود.</p>
+        </div>
+        <button id="refresh-sample-counts-button" class="secondary-button" type="button">به‌روزرسانی آمار</button>
+      </div>
+      <div class="sample-table-wrap">
+        <table class="sample-count-table">
+          <thead>
+            <tr>
+              <th>وسیله</th>
+              <th>روشن / افزایش</th>
+              <th>خاموش / کاهش</th>
+              <th>کل</th>
+              <th>وضعیت</th>
+            </tr>
+          </thead>
+          <tbody id="sample-count-body">
+            <tr><td colspan="5" class="table-empty">در حال دریافت آمار…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="training-card profile-card">
+      <div class="card-toolbar">
+        <div>
+          <h2>پروفایل یادگرفته‌شده یخچال</h2>
+          <p id="profile-readiness">در حال محاسبه…</p>
+        </div>
+        <button id="rebuild-profile-button" class="secondary-button" type="button">محاسبه دوباره</button>
+      </div>
+      <dl class="metrics-grid">
+        <div><dt>نمونه روشن‌شدن</dt><dd id="fridge-on-count">—</dd></div>
+        <div><dt>نمونه خاموش‌شدن</dt><dd id="fridge-off-count">—</dd></div>
+        <div><dt>چرخه کامل</dt><dd id="fridge-cycle-count">—</dd></div>
+        <div><dt>افزایش معمول جریان</dt><dd id="fridge-on-delta">—</dd></div>
+        <div><dt>کاهش معمول جریان</dt><dd id="fridge-off-delta">—</dd></div>
+        <div><dt>مدت روشن‌بودن</dt><dd id="fridge-runtime">—</dd></div>
+        <div><dt>مدت خاموش‌بودن</dt><dd id="fridge-off-period">—</dd></div>
+        <div><dt>وضعیت آمادگی</dt><dd id="fridge-ready">—</dd></div>
+      </dl>
+    </section>
+
+    <section class="training-card">
+      <div class="card-toolbar">
+        <div>
+          <h2>رویدادهای بدون پاسخ امروز <span id="today-count-badge" class="count-badge">۰</span></h2>
+          <p id="queue-status">در حال دریافت رویدادهای امروز…</p>
+        </div>
+        <div class="toolbar-actions">
+          <button id="back-to-today-button"
+                  class="secondary-button back-to-today-button"
+                  type="button"
+                  hidden>
+            بازگشت به رویدادهای امروز
+          </button>
+          <button id="sound-button"
+                  class="secondary-button sound-button"
+                  type="button"
+                  aria-pressed="false">
+            فعال‌کردن صدا
+          </button>
+          <button id="refresh-button"
+                  class="secondary-button"
+                  type="button">
+            به‌روزرسانی
+          </button>
+        </div>
+      </div>
+
+      <div id="empty-state" class="empty-state" hidden>
+        رویداد بدون پاسخ امروز وجود ندارد.
+      </div>
+
+      <div id="event-panel" hidden>
+        <div class="event-heading">
+          <div>
+            <span class="event-id" id="event-id">رویداد —</span>
+            <h3 id="prediction-title">—</h3>
+          </div>
+          <span class="status-pill" id="event-status">—</span>
+        </div>
+
+        <div class="event-time-banner" aria-label="زمان رویداد">
+          <div>
+            <span>تاریخ رویداد</span>
+            <strong id="event-date-prominent">—</strong>
+          </div>
+          <div>
+            <span>ساعت رویداد</span>
+            <strong id="event-clock-prominent">—</strong>
+          </div>
+        </div>
+
+        <dl class="metrics-grid">
+          <div><dt>جریان قبل</dt><dd id="current-before">—</dd></div>
+          <div><dt>جریان بعد</dt><dd id="current-after">—</dd></div>
+          <div><dt>تغییر جریان</dt><dd id="current-delta">—</dd></div>
+          <div><dt>تغییر دما</dt><dd id="temperature-delta">—</dd></div>
+          <div><dt>تغییر رطوبت</dt><dd id="humidity-delta">—</dd></div>
+          <div><dt>تغییر روشنایی</dt><dd id="lux-delta">—</dd></div>
+          <div><dt>حالت</dt><dd id="operating-mode">—</dd></div>
+          <div><dt>تاریخ و ساعت کامل</dt><dd id="event-time">—</dd></div>
+        </dl>
+
+
+        <section class="event-entry-mode">
+          <div>
+            <strong>نوع ثبت رویداد</strong>
+            <p>حالت پیش‌فرض ساده است. فقط برای روشن/خاموش‌شدن هم‌زمان چند وسیله، ترکیبی را انتخاب کن.</p>
+          </div>
+          <label class="entry-mode-choice">
+            <input id="combined-event-toggle" type="checkbox">
+            <span>این رویداد ترکیبی است</span>
+          </label>
+        </section>
+
+        <section id="combined-event-panel" class="combined-event-panel" hidden>
+          <div class="combined-panel-heading">
+            <div>
+              <h3>تقسیم تغییر جریان بین وسیله‌ها</h3>
+              <p>برای هر وسیله، جهت مستقل، سهم جریان و مرحله چرخه را تعیین کن.</p>
+            </div>
+            <button id="add-allocation-row" type="button" class="secondary-button">+ افزودن وسیله</button>
+          </div>
+          <div id="allocation-rows" class="allocation-rows"></div>
+          <div class="allocation-summary">
+            <span>تغییر کل: <strong id="allocation-event-total" dir="ltr">—</strong></span>
+            <span>مجموع سهم‌ها: <strong id="allocation-assigned-total" dir="ltr">0.000 A</strong></span>
+            <span>باقی‌مانده: <strong id="allocation-remaining" dir="ltr">—</strong></span>
+          </div>
+          <button id="save-combined-event" type="button" class="primary-button">
+            ثبت رویداد ترکیبی
+          </button>
+        </section>
+
+        <div class="question-block">
+          <h3>واقعاً چه اتفاقی افتاد؟</h3>
+          <div id="answer-buttons" class="answer-grid"></div>
+          <p class="pending-review-hint">
+            «نمی‌دانم» رویداد را برای دور بعد نگه می‌دارد؛
+            «منشأ قابل تشخیص نیست» آن را نهایی و از صف خارج می‌کند، اما وارد آموزش مدل نمی‌کند.
+          </p>
+        </div>
+
+        <section id="unknown-load-panel" class="unknown-load-panel" hidden>
+          <h3>این بار مربوط به کدام وسیله بود؟</h3>
+          <p>یکی از گزینه‌های رایج را انتخاب کن یا نام وسیله جدید را بنویس.</p>
+          <div id="unknown-preset-buttons" class="unknown-preset-grid"></div>
+          <label class="notes-field">
+            <span>نام وسیله</span>
+            <input id="custom-appliance-name" type="text" maxlength="100" list="unknown-appliance-suggestions" placeholder="مثلاً Laptop Charger یا شارژر لپ‌تاپ">
+            <datalist id="unknown-appliance-suggestions"></datalist>
+          </label>
+          <div class="unknown-actions">
+            <button id="save-unknown-button" class="primary-button" type="button">ثبت بار نامشخص</button>
+            <button id="cancel-unknown-button" class="secondary-button" type="button">انصراف</button>
+          </div>
+        </section>
+
+        <section class="session-control">
+          <div>
+            <strong>مدیریت چرخه وسیله</strong>
+            <p>
+              حالت خودکار تغییرهای نزدیک را به همان چرخه وصل می‌کند و
+              تغییرهای میانی را نمونه روشن/خاموش مستقل حساب نمی‌کند.
+            </p>
+          </div>
+          <label>
+            <span>نحوه اتصال این رویداد</span>
+            <select id="session-mode">
+              <option value="AUTO" selected>هوشمند و خودکار</option>
+              <option value="START_NEW">شروع چرخه جدید</option>
+              <option value="CONTINUE">ادامه چرخه باز</option>
+              <option value="END">پایان چرخه باز</option>
+            </select>
+          </label>
+          <div id="session-suggestion" class="session-suggestion">
+            سیستم هنگام ثبت، مرحله مناسب را تعیین می‌کند.
+          </div>
+        </section>
+
+        <label class="notes-field">
+          <span>یادداشت اختیاری</span>
+          <input id="notes" type="text" maxlength="500" placeholder="مثلاً کولر همچنان روشن بود">
+        </label>
+
+        <label class="correction-toggle">
+          <input id="apply-correction" type="checkbox" checked>
+          <span>نتیجه رویداد و داشبورد هم اصلاح شود</span>
+        </label>
+
+        <p id="message" class="message" role="status"></p>
+      </div>
+    </section>
+
+
+    <details id="unanswered-details" class="training-card collapsible-card">
+      <summary>
+        <span>همه رویدادهای پاسخ‌داده‌نشده</span>
+        <span id="unanswered-count-badge" class="count-badge">۰</span>
+        <small>شامل امروز، دیروز و روزهای قبل</small>
+      </summary>
+      <div class="collapsible-content">
+        <div class="card-toolbar">
+          <p>
+            این فهرست فقط رویدادهایی را نشان می‌دهد که هنوز هیچ پاسخی
+            برای آن‌ها ثبت نشده است.
+          </p>
+          <button id="refresh-unanswered-button"
+                  class="secondary-button"
+                  type="button">
+            به‌روزرسانی
+          </button>
+        </div>
+        <div class="history-table-wrap">
+          <table class="history-table unanswered-table">
+            <thead>
+              <tr>
+                <th>زمان رویداد</th>
+                <th>حالت روز/شب/خواب</th>
+                <th>تشخیص فعلی</th>
+                <th>تغییر جریان</th>
+                <th>تغییر روشنایی</th>
+                <th>وضعیت</th>
+                <th>عملیات</th>
+              </tr>
+            </thead>
+            <tbody id="unanswered-body">
+              <tr>
+                <td colspan="7" class="table-empty">
+                  برای دریافت فهرست، این بخش را باز کن.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+
+    <details id="pending-details" class="training-card collapsible-card">
+      <summary>
+        <span>رویدادهای پندینگ</span>
+        <span id="pending-count-badge" class="count-badge">۰</span>
+        <small>برای دیدن همه پندینگ‌ها باز کن</small>
+      </summary>
+      <div class="collapsible-content">
+        <div class="card-toolbar">
+          <p>همه رویدادهایی که با «نمی‌دانم» ثبت شده‌اند، اینجا باقی می‌مانند.</p>
+          <button id="refresh-pending-button" class="secondary-button" type="button">به‌روزرسانی</button>
+        </div>
+        <div class="history-table-wrap">
+          <table class="history-table pending-table">
+            <thead>
+              <tr>
+                <th>زمان رویداد</th>
+                <th>حالت روز/شب/خواب</th>
+                <th>تشخیص فعلی</th>
+                <th>تغییر جریان</th>
+                <th>تغییر روشنایی</th>
+                <th>وضعیت</th>
+                <th>عملیات</th>
+              </tr>
+            </thead>
+            <tbody id="pending-body">
+              <tr><td colspan="7" class="table-empty">برای دریافت فهرست، این بخش را باز کن.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+
+    <details id="history-details" class="training-card collapsible-card">
+      <summary>
+        <span>تاریخچه ۱۰۰ پاسخ گذشته</span>
+        <small>فقط هنگام نیاز به ویرایش یا حذف باز کن</small>
+      </summary>
+      <div class="collapsible-content">
+        <div class="card-toolbar">
+          <p>آخرین ۱۰۰ پاسخ ثبت‌شده؛ همراه با حالت روز، شب یا خواب.</p>
+          <button id="refresh-history-button" class="secondary-button" type="button">به‌روزرسانی تاریخچه</button>
+        </div>
+        <div class="history-table-wrap">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th>زمان رویداد</th>
+                <th>حالت روز/شب/خواب</th>
+                <th>وسیله</th>
+                <th>مرحله چرخه</th>
+                <th>عمل</th>
+                <th>تغییر جریان</th>
+                <th>یادداشت</th>
+                <th>عملیات</th>
+              </tr>
+            </thead>
+            <tbody id="history-body">
+              <tr><td colspan="8" class="table-empty">برای دریافت تاریخچه، این بخش را باز کن.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p id="history-message" class="message" role="status"></p>
+      </div>
+    </details>
+
+    <dialog id="edit-label-dialog" class="edit-dialog">
+      <form id="edit-label-form" method="dialog">
+        <div class="edit-dialog-header">
+          <div>
+            <span id="edit-label-event-id" class="event-id">رویداد —</span>
+            <h2>ویرایش پاسخ آموزشی</h2>
+          </div>
+          <button id="close-edit-dialog" class="dialog-close" type="button" aria-label="بستن">×</button>
+        </div>
+
+        <label class="edit-field">
+          <span>نتیجه بررسی</span>
+          <select id="edit-review-target" required>
+            <option value="CONFIRMED">پاسخ قطعی</option>
+            <option value="PENDING_UNKNOWN">نمی‌دانم؛ انتقال به پندینگ</option>
+            <option value="FINAL_UNKNOWN">بار کوچک با منشأ نامشخص؛ نهایی</option>
+          </select>
+        </label>
+
+        <label class="edit-field">
+          <span>وسیله</span>
+          <select id="edit-appliance-type" required>
+            <option value="FRIDGE">یخچال</option>
+            <option value="MAIN_ROOM_LIGHT">چراغ اتاق اصلی</option>
+            <option value="PORTABLE_AC">کولر پرتابل</option>
+            <option value="DUCTED_AC">کولر کانالی</option>
+            <option value="UNKNOWN_LOAD">بار دیگر / نامشخص</option>
+          </select>
+        </label>
+
+        <label class="edit-field">
+          <span>عمل</span>
+          <select id="edit-action" required>
+            <option value="ON">روشن شد</option>
+            <option value="OFF">خاموش شد</option>
+            <option value="INCREASE">مصرف افزایش یافت</option>
+            <option value="DECREASE">مصرف کاهش یافت</option>
+          </select>
+        </label>
+
+        <label class="edit-field">
+          <span>مدیریت چرخه</span>
+          <select id="edit-session-mode" required>
+            <option value="AUTO">هوشمند و خودکار</option>
+            <option value="START_NEW">شروع چرخه جدید</option>
+            <option value="CONTINUE">ادامه چرخه باز</option>
+            <option value="END">پایان چرخه باز</option>
+          </select>
+        </label>
+
+        <label id="edit-custom-name-field" class="edit-field" hidden>
+          <span>نام وسیله</span>
+          <input id="edit-custom-appliance-name" type="text" maxlength="100" placeholder="مثلاً Laptop Charger">
+        </label>
+
+        <label class="edit-field">
+          <span>یادداشت</span>
+          <input id="edit-notes" type="text" maxlength="500">
+        </label>
+
+        <label class="correction-toggle">
+          <input id="edit-apply-correction" type="checkbox" checked>
+          <span>نتیجه رویداد و داشبورد هم اصلاح شود</span>
+        </label>
+
+        <p id="edit-message" class="message" role="status"></p>
+        <div class="dialog-actions">
+          <button id="save-edit-button" class="primary-button" type="submit">ذخیره تغییرات</button>
+          <button id="cancel-edit-button" class="secondary-button" type="button">انصراف</button>
+        </div>
+      </form>
+    </dialog>
+
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./supabase-config.js"></script>
+  <script src="./appliance-training.js?v=11.2-local-cycle-mode"></script>
+</body>
+</html>
