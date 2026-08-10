@@ -189,47 +189,101 @@
     return (events || []).map(normalizeEvent);
   }
 
-  // History rows are canonical appliance_training_labels.  Their session
-  // fields must win over similarly named legacy/cloud fields joined from the
-  // source event; otherwise an edited label can still be rendered with the
-  // event's old cycle id, phase, and index.
-  function normalizeHistoryLabel(label = {}) {
-    const normalized = normalizeEvent(label);
+  function numericValue(...values) {
+    for (const value of values) {
+      if (value === null || value === undefined || value === "") continue;
+      const parsed = Number(value);
+      if (Number.isFinite(parsed)) return parsed;
+    }
+    return null;
+  }
+
+  function normalizeSession(session = {}) {
+    let previousCumulative = 0;
+    const events = normalizeEvents(session.events || []).map((event) => {
+      const suppliedCumulative = numericValue(
+        event.cumulative_delta_a,
+        event.session_net_delta_a,
+        event.cloud_session_net_delta_a,
+        event.operation_session_net_delta_a,
+      );
+      let delta = numericValue(
+        event.allocated_current_delta_a,
+        event.allocated_delta_a,
+        event.signed_delta_a,
+        event.current_delta_a,
+        event.event_delta_a,
+        event.delta_a,
+      );
+      const derivedDelta = suppliedCumulative === null
+        ? null
+        : suppliedCumulative - previousCumulative;
+      if (
+        delta === null ||
+        (delta === 0 && derivedDelta !== null && Math.abs(derivedDelta) > 1e-9)
+      ) {
+        delta = derivedDelta;
+      }
+      delta = delta ?? 0;
+      const cumulative = suppliedCumulative ?? (previousCumulative + delta);
+      previousCumulative = cumulative;
+      return {
+        ...event,
+        current_delta_a: delta,
+        cumulative_delta_a: cumulative,
+      };
+    });
+
+    const lastEvent = events[events.length - 1] || {};
+    const lastPhase = String(firstPresent(
+      lastEvent.session_phase,
+      session.last_session_phase,
+      session.session_phase,
+    ) || "").toUpperCase();
+    const explicitlyClosed = ["SHUTDOWN", "END", "CLOSE", "CLOSED"]
+      .includes(lastPhase);
+    const explicitlyOpen = session.is_open === true ||
+      String(session.status || "").toUpperCase() === "OPEN";
+    const isOpen = explicitlyClosed ? false : explicitlyOpen;
+
+    const cumulative = events.length
+      ? events[events.length - 1].cumulative_delta_a
+      : numericValue(session.cumulative_delta_a, session.net_delta_a) ?? 0;
     return {
-      ...normalized,
-      operation_session_id: firstPresent(
-        label.operation_session_id,
-        label.cloud_operation_session_id,
-        normalized.operation_session_id,
+      ...session,
+      id: firstPresent(session.id, session.operation_session_id),
+      status: isOpen ? "OPEN" : "CLOSED",
+      is_open: isOpen,
+      event_count: numericValue(session.event_count, events.length) ?? events.length,
+      cumulative_delta_a: cumulative,
+      net_delta_a: cumulative,
+      net_return_error_a: numericValue(
+        session.net_return_error_a,
+        Math.abs(cumulative),
       ),
-      session_phase: firstPresent(
-        label.session_phase,
-        label.operation_session_phase,
-        label.cloud_session_phase,
-        normalized.session_phase,
+      positive_delta_a: numericValue(
+        session.positive_delta_a,
+        events.reduce((sum, event) =>
+          sum + Math.max(0, event.current_delta_a), 0),
       ),
-      session_event_index: firstPresent(
-        label.session_event_index,
-        label.operation_session_event_index,
-        label.cloud_session_event_index,
-        normalized.session_event_index,
+      negative_delta_a: numericValue(
+        session.negative_delta_a,
+        events.reduce((sum, event) =>
+          sum + Math.min(0, event.current_delta_a), 0),
       ),
-      session_net_delta_a: firstPresent(
-        label.session_net_delta_a,
-        label.operation_session_net_delta_a,
-        label.cloud_session_net_delta_a,
-        normalized.session_net_delta_a,
-      ),
-      selected_session_mode: firstPresent(
-        label.selected_session_mode,
-        label.session_mode,
-        normalized.selected_session_mode,
-      ),
+      events,
     };
   }
 
-  function normalizeHistoryLabels(labels) {
-    return (labels || []).map(normalizeHistoryLabel);
+  function normalizeSessions(sessions, openOnly = false) {
+    const unique = new Map();
+    (sessions || []).map(normalizeSession).forEach((session) => {
+      if (session.id == null) return;
+      unique.set(String(session.id), session);
+    });
+    return [...unique.values()].filter((session) =>
+      !openOnly || session.is_open
+    );
   }
 
   function labelFor(appliance, action) {
@@ -552,7 +606,7 @@
 
   function sessionsFromHistory(labels, limit = 200, openOnly = false) {
     const groups = new Map();
-    normalizeHistoryLabels(labels).forEach((label) => {
+    normalizeEvents(labels).forEach((label) => {
       if (
         label.review_status !== "CONFIRMED" ||
         label.operation_session_id == null
@@ -855,7 +909,7 @@
   }
 
   function renderCycleVisuals(payload) {
-    const sessions = payload.sessions || [];
+    const sessions = normalizeSessions(payload.sessions || []);
     state.cycleVisualSessions = sessions;
 
     const filter = $("cycle-visual-filter").value;
@@ -1032,7 +1086,7 @@
   }
 
   function renderOpenSessions(payload) {
-    const sessions = payload.sessions || [];
+    const sessions = normalizeSessions(payload.sessions || [], true);
     state.openSessions = sessions;
 
     const list = $("open-cycles-list");
@@ -1547,7 +1601,7 @@
   function renderHistory(payload) {
     const body = $("history-body");
     body.replaceChildren();
-    const labels = normalizeHistoryLabels(payload.labels).sort((a, b) => {
+    const labels = normalizeEvents(payload.labels).sort((a, b) => {
       const timeA = new Date(
         a.event_started_at || a.updated_at || a.created_at || 0
       ).getTime();
