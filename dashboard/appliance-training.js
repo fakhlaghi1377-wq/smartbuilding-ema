@@ -122,6 +122,54 @@
     return `mode-${normalized.replace(/[^a-z0-9_-]/g, "")}`;
   }
 
+  function firstPresent(...values) {
+    return values.find((value) =>
+      value !== null && value !== undefined && String(value).trim() !== ""
+    ) ?? null;
+  }
+
+  // Compatibility layer for the currently deployed Edge Function.  It keeps
+  // all writes unchanged and only translates legacy/cloud response names into
+  // the names used by this dashboard.
+  function normalizeEvent(event = {}) {
+    const evidence = event.evidence && typeof event.evidence === "object"
+      ? event.evidence
+      : {};
+    return {
+      ...event,
+      day_night_mode: firstPresent(
+        event.day_night_mode,
+        event.final_operating_mode,
+        event.operating_mode,
+        event.ac_status,
+        evidence.final_operating_mode,
+        evidence.day_night_mode,
+        evidence.operating_mode,
+        evidence.ac_status,
+      ),
+      operation_session_id: firstPresent(
+        event.operation_session_id,
+        event.cloud_operation_session_id,
+      ),
+      session_phase: firstPresent(
+        event.session_phase,
+        event.cloud_session_phase,
+      ),
+      session_event_index: firstPresent(
+        event.session_event_index,
+        event.cloud_session_event_index,
+      ),
+      session_net_delta_a: firstPresent(
+        event.session_net_delta_a,
+        event.cloud_session_net_delta_a,
+      ),
+    };
+  }
+
+  function normalizeEvents(events) {
+    return (events || []).map(normalizeEvent);
+  }
+
   function labelFor(appliance, action) {
     return `${applianceLabels[appliance] || appliance} — ${actionLabels[action] || action}`;
   }
@@ -438,6 +486,89 @@
     return remain
       ? `${hours.toLocaleString("fa-IR")} ساعت و ${remain.toLocaleString("fa-IR")} دقیقه`
       : `${hours.toLocaleString("fa-IR")} ساعت`;
+  }
+
+  function sessionsFromHistory(labels, limit = 200, openOnly = false) {
+    const groups = new Map();
+    normalizeEvents(labels).forEach((label) => {
+      if (
+        label.review_status !== "CONFIRMED" ||
+        label.operation_session_id == null
+      ) return;
+      const key = String(label.operation_session_id);
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(label);
+    });
+
+    return [...groups.entries()].map(([id, group]) => {
+      group.sort((a, b) => {
+        const indexDelta = Number(a.session_event_index || 0) -
+          Number(b.session_event_index || 0);
+        if (indexDelta) return indexDelta;
+        return new Date(a.event_started_at || a.created_at || 0) -
+          new Date(b.event_started_at || b.created_at || 0);
+      });
+      const first = group[0];
+      const last = group[group.length - 1];
+      let cumulative = 0;
+      const events = group.map((item) => {
+        const delta = Number(
+          item.allocated_current_delta_a ??
+          item.allocated_delta_a ??
+          item.current_delta_a ?? 0
+        );
+        cumulative += delta;
+        return {
+          ...item,
+          current_delta_a: delta,
+          cumulative_delta_a: cumulative,
+        };
+      });
+      const lastPhase = String(last.session_phase || "").toUpperCase();
+      const closed = ["SHUTDOWN", "END", "CLOSE", "CLOSED"].includes(lastPhase);
+      const startedAt = first.event_started_at || first.created_at;
+      const lastAt = last.event_started_at || last.updated_at || last.created_at;
+      const startDate = parseEventDate(startedAt);
+      const lastDate = parseEventDate(lastAt);
+      return {
+        id,
+        operation_session_id: id,
+        appliance_type: first.appliance_type,
+        custom_appliance_name: first.custom_appliance_name || null,
+        status: closed ? "CLOSED" : "OPEN",
+        is_open: !closed,
+        started_at: startedAt,
+        ended_at: closed ? lastAt : null,
+        last_event_at: lastAt,
+        duration_seconds: startDate && lastDate
+          ? Math.max(0, (lastDate - startDate) / 1000)
+          : 0,
+        event_count: events.length,
+        cumulative_delta_a: cumulative,
+        net_delta_a: cumulative,
+        net_return_error_a: Math.abs(cumulative),
+        positive_delta_a: events.reduce(
+          (sum, event) => sum + Math.max(0, Number(event.current_delta_a)), 0
+        ),
+        negative_delta_a: events.reduce(
+          (sum, event) => sum + Math.min(0, Number(event.current_delta_a)), 0
+        ),
+        events,
+      };
+    }).filter((session) => !openOnly || session.is_open)
+      .sort((a, b) => new Date(b.started_at || 0) - new Date(a.started_at || 0))
+      .slice(0, limit);
+  }
+
+  async function historySessionsFallback(limit = 200, openOnly = false) {
+    const response = await apiFetch(`${API}/history?limit=1000`, {
+      cache: "no-store",
+    });
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload.detail || "دریافت تاریخچه چرخه‌ها ناموفق بود");
+    }
+    return sessionsFromHistory(payload.labels || [], limit, openOnly);
   }
 
   function svgElement(name, attributes = {}) {
@@ -785,6 +916,9 @@
         payload.detail || "دریافت نمودار چرخه‌ها ناموفق بود"
       );
     }
+    if (!(payload.sessions || []).length) {
+      payload.sessions = await historySessionsFallback(30, false);
+    }
     renderCycleVisuals(payload);
   }
 
@@ -934,6 +1068,9 @@
       );
     }
 
+    if (!(payload.sessions || []).length) {
+      payload.sessions = await historySessionsFallback(200, true);
+    }
     renderOpenSessions(payload);
   }
 
@@ -1190,7 +1327,7 @@
     const payload = await response.json();
     if (!response.ok) throw new Error(payload.detail || "دریافت رویدادهای امروز ناموفق بود");
 
-    const incoming = payload.events || [];
+    const incoming = normalizeEvents(payload.events);
     const newestId = incoming.reduce((max, event) => Math.max(max, Number(event.id) || 0), 0);
     if (state.initialEventsLoaded && newestId > (state.newestSeenEventId || 0)) {
       await playNewEventSound();
@@ -1268,7 +1405,7 @@
         payload.detail || "دریافت رویدادهای پاسخ‌داده‌نشده ناموفق بود"
       );
     }
-    state.unansweredEvents = payload.events || [];
+    state.unansweredEvents = normalizeEvents(payload.events);
     state.unansweredLoaded = true;
     renderUnansweredList(state.unansweredEvents);
   }
@@ -1323,7 +1460,7 @@
         );
       }
 
-      state.pendingEvents = payload.events || [];
+      state.pendingEvents = normalizeEvents(payload.events);
       state.pendingLoaded = true;
       renderPendingList(state.pendingEvents);
     } catch (error) {
@@ -1348,7 +1485,7 @@
   function renderHistory(payload) {
     const body = $("history-body");
     body.replaceChildren();
-    const labels = [...(payload.labels || [])].sort((a, b) => {
+    const labels = normalizeEvents(payload.labels).sort((a, b) => {
       const timeA = new Date(
         a.event_started_at || a.updated_at || a.created_at || 0
       ).getTime();
