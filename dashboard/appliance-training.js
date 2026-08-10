@@ -189,6 +189,49 @@
     return (events || []).map(normalizeEvent);
   }
 
+  // History rows are canonical appliance_training_labels.  Their session
+  // fields must win over similarly named legacy/cloud fields joined from the
+  // source event; otherwise an edited label can still be rendered with the
+  // event's old cycle id, phase, and index.
+  function normalizeHistoryLabel(label = {}) {
+    const normalized = normalizeEvent(label);
+    return {
+      ...normalized,
+      operation_session_id: firstPresent(
+        label.operation_session_id,
+        label.cloud_operation_session_id,
+        normalized.operation_session_id,
+      ),
+      session_phase: firstPresent(
+        label.session_phase,
+        label.operation_session_phase,
+        label.cloud_session_phase,
+        normalized.session_phase,
+      ),
+      session_event_index: firstPresent(
+        label.session_event_index,
+        label.operation_session_event_index,
+        label.cloud_session_event_index,
+        normalized.session_event_index,
+      ),
+      session_net_delta_a: firstPresent(
+        label.session_net_delta_a,
+        label.operation_session_net_delta_a,
+        label.cloud_session_net_delta_a,
+        normalized.session_net_delta_a,
+      ),
+      selected_session_mode: firstPresent(
+        label.selected_session_mode,
+        label.session_mode,
+        normalized.selected_session_mode,
+      ),
+    };
+  }
+
+  function normalizeHistoryLabels(labels) {
+    return (labels || []).map(normalizeHistoryLabel);
+  }
+
   function labelFor(appliance, action) {
     return `${applianceLabels[appliance] || appliance} — ${actionLabels[action] || action}`;
   }
@@ -509,7 +552,7 @@
 
   function sessionsFromHistory(labels, limit = 200, openOnly = false) {
     const groups = new Map();
-    normalizeEvents(labels).forEach((label) => {
+    normalizeHistoryLabels(labels).forEach((label) => {
       if (
         label.review_status !== "CONFIRMED" ||
         label.operation_session_id == null
@@ -1504,7 +1547,7 @@
   function renderHistory(payload) {
     const body = $("history-body");
     body.replaceChildren();
-    const labels = normalizeEvents(payload.labels).sort((a, b) => {
+    const labels = normalizeHistoryLabels(payload.labels).sort((a, b) => {
       const timeA = new Date(
         a.event_started_at || a.updated_at || a.created_at || 0
       ).getTime();
