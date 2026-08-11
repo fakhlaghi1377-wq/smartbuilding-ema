@@ -228,17 +228,17 @@
     <section class="training-card profile-card">
       <div class="card-toolbar">
         <div>
-          <h2>پروفایل یادگرفته‌شده یخچال</h2>
+          <h2>پروفایل چرخه‌ای یادگرفته‌شده یخچال</h2>
           <p id="profile-readiness">در حال محاسبه…</p>
         </div>
         <button id="rebuild-profile-button" class="secondary-button" type="button">محاسبه دوباره</button>
       </div>
       <dl class="metrics-grid">
-        <div><dt>نمونه روشن‌شدن</dt><dd id="fridge-on-count">—</dd></div>
-        <div><dt>نمونه خاموش‌شدن</dt><dd id="fridge-off-count">—</dd></div>
+        <div><dt>شروع چرخه / روشن‌شدن</dt><dd id="fridge-on-count">—</dd></div>
+        <div><dt>پایان چرخه / خاموش‌شدن</dt><dd id="fridge-off-count">—</dd></div>
         <div><dt>چرخه کامل</dt><dd id="fridge-cycle-count">—</dd></div>
-        <div><dt>افزایش معمول جریان</dt><dd id="fridge-on-delta">—</dd></div>
-        <div><dt>کاهش معمول جریان</dt><dd id="fridge-off-delta">—</dd></div>
+        <div><dt>افزایش شروع چرخه</dt><dd id="fridge-on-delta">—</dd></div>
+        <div><dt>کاهش پایان چرخه</dt><dd id="fridge-off-delta">—</dd></div>
         <div><dt>مدت روشن‌بودن</dt><dd id="fridge-runtime">—</dd></div>
         <div><dt>مدت خاموش‌بودن</dt><dd id="fridge-off-period">—</dd></div>
         <div><dt>وضعیت آمادگی</dt><dd id="fridge-ready">—</dd></div>
@@ -586,6 +586,6 @@
   </main>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="./supabase-config.js"></script>
-  <script src="./appliance-training.js?v=11.5-session-status-chart-fix"></script>
+  <script src="./appliance-training.js?v=11.6-strict-fridge-cycle-profile"></script>
 </body>
 </html>

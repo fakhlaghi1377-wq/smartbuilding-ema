@@ -1280,6 +1280,119 @@
     if (response.ok) renderSampleCounts(await response.json());
   }
 
+  function median(values) {
+    const clean = values
+      .map(Number)
+      .filter((value) => Number.isFinite(value))
+      .sort((a, b) => a - b);
+    if (!clean.length) return null;
+    const middle = Math.floor(clean.length / 2);
+    return clean.length % 2
+      ? clean[middle]
+      : (clean[middle - 1] + clean[middle]) / 2;
+  }
+
+  function mean(values) {
+    const clean = values.map(Number).filter((value) => Number.isFinite(value));
+    if (!clean.length) return null;
+    return clean.reduce((sum, value) => sum + value, 0) / clean.length;
+  }
+
+  function strictFridgeProfileFromHistory(labels) {
+    const activeVersion = Number(state.activeDatasetVersion || 0);
+    const fridgeLabels = normalizeEvents(labels || []).filter((label) => {
+      if (label.review_status !== "CONFIRMED") return false;
+      if (label.appliance_type !== "FRIDGE") return false;
+      if (
+        activeVersion &&
+        label.dataset_version != null &&
+        Number(label.dataset_version) !== activeVersion
+      ) return false;
+      if (
+        activeVersion &&
+        label.dataset_status &&
+        label.dataset_status !== "ACTIVE"
+      ) return false;
+      return true;
+    });
+
+    // Only actual cycle boundaries count as training samples here.
+    // STEP_INCREASE / STEP_DECREASE are intentionally excluded.
+    const starts = fridgeLabels.filter(
+      (label) => String(label.session_phase || "").toUpperCase() === "STARTUP"
+    );
+    const ends = fridgeLabels.filter(
+      (label) => String(label.session_phase || "").toUpperCase() === "SHUTDOWN"
+    );
+
+    const sessions = new Map();
+    fridgeLabels.forEach((label) => {
+      if (label.operation_session_id == null) return;
+      const key = String(label.operation_session_id);
+      if (!sessions.has(key)) sessions.set(key, []);
+      sessions.get(key).push(label);
+    });
+
+    const completeCycles = [];
+    sessions.forEach((group, id) => {
+      const ordered = group.slice().sort((a, b) => {
+        const indexDelta = Number(a.session_event_index || 0) -
+          Number(b.session_event_index || 0);
+        if (indexDelta) return indexDelta;
+        return new Date(a.event_started_at || a.created_at || 0) -
+          new Date(b.event_started_at || b.created_at || 0);
+      });
+      const start = ordered.find(
+        (item) => String(item.session_phase || "").toUpperCase() === "STARTUP"
+      );
+      const end = [...ordered].reverse().find(
+        (item) => String(item.session_phase || "").toUpperCase() === "SHUTDOWN"
+      );
+      if (!start || !end) return;
+      const startAt = parseEventDate(start.event_started_at || start.created_at);
+      const endAt = parseEventDate(end.event_started_at || end.created_at);
+      if (!startAt || !endAt || endAt < startAt) return;
+      completeCycles.push({
+        id,
+        startAt,
+        endAt,
+        runtimeMinutes: (endAt - startAt) / 60000,
+      });
+    });
+
+    completeCycles.sort((a, b) => a.startAt - b.startAt);
+    const offPeriods = [];
+    for (let index = 1; index < completeCycles.length; index += 1) {
+      const previous = completeCycles[index - 1];
+      const current = completeCycles[index];
+      const minutes = (current.startAt - previous.endAt) / 60000;
+      if (Number.isFinite(minutes) && minutes >= 0) offPeriods.push(minutes);
+    }
+
+    const onCount = starts.length;
+    const offCount = ends.length;
+    const completeCount = completeCycles.length;
+    const ready = onCount >= 4 && offCount >= 4 && completeCount >= 2;
+
+    return {
+      on_sample_count: onCount,
+      off_sample_count: offCount,
+      complete_cycle_count: completeCount,
+      on_delta_mean_a: mean(starts.map((item) =>
+        item.allocated_current_delta_a ?? item.current_delta_a
+      )),
+      off_delta_mean_a: mean(ends.map((item) =>
+        item.allocated_current_delta_a ?? item.current_delta_a
+      )),
+      runtime_median_minutes: median(
+        completeCycles.map((cycle) => cycle.runtimeMinutes)
+      ),
+      off_period_median_minutes: median(offPeriods),
+      minimum_samples_ready: ready,
+      strict_cycle_boundaries: true,
+    };
+  }
+
   function renderFridgeProfile(profile) {
     $("fridge-on-count").textContent = profile.on_sample_count ?? 0;
     $("fridge-off-count").textContent = profile.off_sample_count ?? 0;
@@ -1292,23 +1405,44 @@
     $("fridge-ready").textContent = ready ? "آماده استفاده" : "در حال یادگیری";
     $("fridge-ready").className = ready ? "ready-yes" : "ready-no";
     $("profile-readiness").textContent = ready
-      ? "نمونه کافی برای ورود کنترل‌شده به الگوریتم جمع شده است."
-      : "حداقل ۴ روشن‌شدن، ۴ خاموش‌شدن و ۲ چرخه کامل لازم است.";
+      ? "این پروفایل فقط از شروع و پایان واقعی چرخه‌های یخچال در Dataset فعال محاسبه شده است."
+      : "فقط شروع چرخه (STARTUP) و پایان چرخه (SHUTDOWN) شمارش می‌شوند؛ حداقل ۴ روشن‌شدن، ۴ خاموش‌شدن و ۲ چرخه کامل لازم است.";
   }
 
   async function loadFridgeProfile() {
-    const response = await apiFetch(`${API}/fridge-profile`, { cache: "no-store" });
-    if (response.ok) renderFridgeProfile(await response.json());
+    // Prefer strict cycle-boundary statistics from history so intermediate
+    // current fluctuations never inflate ON/OFF sample counts.
+    try {
+      const historyResponse = await apiFetch(`${API}/history?limit=1000`, {
+        cache: "no-store",
+      });
+      const historyPayload = await historyResponse.json();
+      if (!historyResponse.ok) {
+        throw new Error(
+          historyPayload.detail || "دریافت تاریخچه برای پروفایل یخچال ناموفق بود"
+        );
+      }
+      renderFridgeProfile(
+        strictFridgeProfileFromHistory(historyPayload.labels || [])
+      );
+      return;
+    } catch (_) {
+      // Backward-compatible fallback: keep the existing Edge Function profile
+      // available if history cannot be read for any reason.
+      const response = await apiFetch(`${API}/fridge-profile`, {
+        cache: "no-store",
+      });
+      if (response.ok) renderFridgeProfile(await response.json());
+    }
   }
 
   async function rebuildFridgeProfile() {
     const button = $("rebuild-profile-button");
     button.disabled = true;
     try {
-      const response = await apiFetch(`${API}/fridge-profile/rebuild`, { method: "POST" });
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload.detail || "محاسبه پروفایل ناموفق بود");
-      renderFridgeProfile(payload.profile);
+      // The visible profile is recalculated from confirmed STARTUP/SHUTDOWN
+      // boundaries in the active Dataset. No database row is modified here.
+      await loadFridgeProfile();
     } catch (error) {
       setMessage(error.message || "خطا در محاسبه پروفایل", "error");
     } finally {
