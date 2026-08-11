@@ -44,7 +44,7 @@
   };
   const commonUnknownAppliances = [
     "Laptop Charger", "Laptop Fan", "Phone Charger", "Monitor", "TV",
-    "Printer", "Fan", "Vacuum Cleaner", "Microwave", "Air Fryer",
+    "Printer", "Fan", "Vacuum Cleaner", "Washing Machine", "Microwave", "Air Fryer",
     "Coffee Maker", "Tea Maker", "Tea Maker Kettle", "Corridor Light",
     "W.C Light", "Bedroom Light", "Refrigerator Water Dispenser",
   ];
