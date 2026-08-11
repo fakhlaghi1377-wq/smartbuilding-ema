@@ -137,6 +137,34 @@
       : {};
     return {
       ...event,
+      // Prefer the stable names returned by the Edge Function, while keeping
+      // direct source-column/evidence fallbacks for backward compatibility.
+      temperature_delta_c: firstPresent(
+        event.temperature_delta_c,
+        event.sht31_temperature_delta_c,
+        evidence.temperature_delta_c,
+        evidence.sht31_temperature_delta_c,
+        event.scd40_temperature_delta_c,
+        evidence.scd40_temperature_delta_c,
+      ),
+      humidity_delta_rh: firstPresent(
+        event.humidity_delta_rh,
+        event.sht31_humidity_delta_rh,
+        evidence.humidity_delta_rh,
+        evidence.sht31_humidity_delta_rh,
+        event.scd40_humidity_delta_rh,
+        evidence.scd40_humidity_delta_rh,
+      ),
+      illuminance_delta_lux: firstPresent(
+        event.illuminance_delta_lux,
+        evidence.illuminance_delta_lux,
+      ),
+      temperature_delta_5min_c: firstPresent(
+        event.temperature_delta_5min_c,
+        event.sht31_temperature_delta_5min_c,
+        evidence.temperature_delta_5min_c,
+        evidence.sht31_temperature_delta_5min_c,
+      ),
       day_night_mode: firstPresent(
         event.day_night_mode,
         event.final_operating_mode,
