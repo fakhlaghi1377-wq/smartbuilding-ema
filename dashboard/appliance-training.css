@@ -187,7 +187,7 @@ h1 { margin: 0; font-size: clamp(26px, 4vw, 40px); }
 
 .history-card { margin-top: 1.25rem; }
 .history-table-wrap { overflow-x: auto; margin-top: 18px; }
-.history-table { width: 100%; border-collapse: collapse; min-width: 900px; }
+.history-table { width: 100%; border-collapse: collapse; min-width: 1250px; }
 .history-table th,
 .history-table td { padding: 12px 14px; border-bottom: 1px solid #e2e8f0; text-align: right; vertical-align: middle; }
 .history-table th { background: #f8fafc; color: #475569; font-size: 13px; }

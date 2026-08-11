@@ -1641,7 +1641,7 @@
     });
     state.historyLabels = labels;
     if (!labels.length) {
-      body.innerHTML = '<tr><td colspan="8" class="table-empty">هنوز پاسخی ثبت نشده است.</td></tr>';
+      body.innerHTML = '<tr><td colspan="11" class="table-empty">هنوز پاسخی ثبت نشده است.</td></tr>';
       return;
     }
 
@@ -1674,6 +1674,9 @@
         </td>
         <td>${actionLabels[label.action] || label.action}</td>
         <td dir="ltr">${number(label.current_delta_a, 3, " A")}</td>
+        <td dir="ltr">${number(label.temperature_delta_c, 3, " °C")}</td>
+        <td dir="ltr">${number(label.humidity_delta_rh, 3, " %RH")}</td>
+        <td dir="ltr">${number(label.illuminance_delta_lux, 1, " lux")}</td>
         <td>${label.notes || "—"}</td>
       `;
       const actionsCell = document.createElement("td");
