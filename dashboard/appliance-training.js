@@ -2102,7 +2102,7 @@
   $("cancel-edit-button").addEventListener("click", closeEditDialog);
 
   async function loadUnansweredCount() {
-    const response = await fetch(`${API}/unanswered-count`, {
+    const response = await fetch(`${API}/unanswered?limit=2000`, {
       cache: "no-store",
     });
     if (!response.ok) return;
