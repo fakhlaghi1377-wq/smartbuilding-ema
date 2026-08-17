@@ -1,20 +1,7 @@
 (() => {
   "use strict";
 
-  const cloudConfig = window.SMART_BUILDING_CONFIG || {};
-  const API = String(cloudConfig.APPLIANCE_TRAINING_API_URL || "").replace(/\/$/, "");
-  const cloudKey = cloudConfig.SUPABASE_PUBLISHABLE_KEY || "";
-
-  if (!API || !cloudKey) {
-    throw new Error("Cloud appliance-training configuration is missing.");
-  }
-
-  function apiFetch(url, options = {}) {
-    const headers = new Headers(options.headers || {});
-    headers.set("apikey", cloudKey);
-    headers.set("Authorization", `Bearer ${cloudKey}`);
-    return window.fetch(url, { ...options, headers });
-  }
+  const API = "/api/appliance-training";
   const applianceLabels = {
     FRIDGE: "یخچال",
     MAIN_ROOM_LIGHT: "چراغ اتاق اصلی",
@@ -44,7 +31,7 @@
   };
   const commonUnknownAppliances = [
     "Laptop Charger", "Laptop Fan", "Phone Charger", "Monitor", "TV",
-    "Printer", "Fan", "Vacuum Cleaner", "Washing Machine", "Microwave", "Air Fryer",
+    "Printer", "Fan", "Vacuum Cleaner", "Microwave", "Air Fryer",
     "Coffee Maker", "Tea Maker", "Tea Maker Kettle", "Corridor Light",
     "W.C Light", "Bedroom Light", "Refrigerator Water Dispenser",
   ];
@@ -122,198 +109,6 @@
     return `mode-${normalized.replace(/[^a-z0-9_-]/g, "")}`;
   }
 
-  function firstPresent(...values) {
-    return values.find((value) =>
-      value !== null && value !== undefined && String(value).trim() !== ""
-    ) ?? null;
-  }
-
-  // Compatibility layer for the currently deployed Edge Function.  It keeps
-  // all writes unchanged and only translates legacy/cloud response names into
-  // the names used by this dashboard.
-  function normalizeEvent(event = {}) {
-    const evidence = event.evidence && typeof event.evidence === "object"
-      ? event.evidence
-      : {};
-    return {
-      ...event,
-      // Prefer the stable names returned by the Edge Function, while keeping
-      // direct source-column/evidence fallbacks for backward compatibility.
-      temperature_delta_c: firstPresent(
-        event.temperature_delta_c,
-        event.sht31_temperature_delta_c,
-        evidence.temperature_delta_c,
-        evidence.sht31_temperature_delta_c,
-        event.scd40_temperature_delta_c,
-        evidence.scd40_temperature_delta_c,
-      ),
-      humidity_delta_rh: firstPresent(
-        event.humidity_delta_rh,
-        event.sht31_humidity_delta_rh,
-        evidence.humidity_delta_rh,
-        evidence.sht31_humidity_delta_rh,
-        event.scd40_humidity_delta_rh,
-        evidence.scd40_humidity_delta_rh,
-      ),
-      illuminance_delta_lux: firstPresent(
-        event.illuminance_delta_lux,
-        evidence.illuminance_delta_lux,
-      ),
-      temperature_delta_5min_c: firstPresent(
-        event.temperature_delta_5min_c,
-        event.sht31_temperature_delta_5min_c,
-        evidence.temperature_delta_5min_c,
-        evidence.sht31_temperature_delta_5min_c,
-      ),
-      day_night_mode: firstPresent(
-        event.day_night_mode,
-        event.final_operating_mode,
-        event.operating_mode,
-        event.solar_mode,
-        event.ac_status,
-        evidence.final_operating_mode,
-        evidence.day_night_mode,
-        evidence.operating_mode,
-        evidence.solar_mode,
-        evidence.ac_status,
-      ),
-      operation_session_id: firstPresent(
-        event.cloud_operation_session_id,
-        event.operation_session_id,
-        evidence.operation_session_id,
-      ),
-      session_phase: firstPresent(
-        event.cloud_session_phase,
-        event.operation_session_phase,
-        event.session_phase === "STANDALONE" && firstPresent(
-          event.cloud_operation_session_id,
-          event.operation_session_id,
-          evidence.operation_session_id,
-        ) ? null : event.session_phase,
-        evidence.operation_session_phase,
-      ),
-      session_event_index: firstPresent(
-        event.cloud_session_event_index,
-        event.operation_session_event_index,
-        event.session_event_index,
-        evidence.operation_session_event_index,
-      ),
-      session_net_delta_a: firstPresent(
-        event.cloud_session_net_delta_a,
-        event.operation_session_net_delta_a,
-        event.session_net_delta_a,
-        evidence.operation_session_net_delta_a,
-      ),
-      selected_session_mode: firstPresent(
-        event.selected_session_mode,
-        event.session_mode,
-        evidence.selected_session_mode,
-        evidence.session_mode,
-      ),
-    };
-  }
-
-  function normalizeEvents(events) {
-    return (events || []).map(normalizeEvent);
-  }
-
-  function numericValue(...values) {
-    for (const value of values) {
-      if (value === null || value === undefined || value === "") continue;
-      const parsed = Number(value);
-      if (Number.isFinite(parsed)) return parsed;
-    }
-    return null;
-  }
-
-  function normalizeSession(session = {}) {
-    let previousCumulative = 0;
-    const events = normalizeEvents(session.events || []).map((event) => {
-      const suppliedCumulative = numericValue(
-        event.cumulative_delta_a,
-        event.session_net_delta_a,
-        event.cloud_session_net_delta_a,
-        event.operation_session_net_delta_a,
-      );
-      let delta = numericValue(
-        event.allocated_current_delta_a,
-        event.allocated_delta_a,
-        event.signed_delta_a,
-        event.current_delta_a,
-        event.event_delta_a,
-        event.delta_a,
-      );
-      const derivedDelta = suppliedCumulative === null
-        ? null
-        : suppliedCumulative - previousCumulative;
-      if (
-        delta === null ||
-        (delta === 0 && derivedDelta !== null && Math.abs(derivedDelta) > 1e-9)
-      ) {
-        delta = derivedDelta;
-      }
-      delta = delta ?? 0;
-      const cumulative = suppliedCumulative ?? (previousCumulative + delta);
-      previousCumulative = cumulative;
-      return {
-        ...event,
-        current_delta_a: delta,
-        cumulative_delta_a: cumulative,
-      };
-    });
-
-    const lastEvent = events[events.length - 1] || {};
-    const lastPhase = String(firstPresent(
-      lastEvent.session_phase,
-      session.last_session_phase,
-      session.session_phase,
-    ) || "").toUpperCase();
-    const explicitlyClosed = ["SHUTDOWN", "END", "CLOSE", "CLOSED"]
-      .includes(lastPhase);
-    const explicitlyOpen = session.is_open === true ||
-      String(session.status || "").toUpperCase() === "OPEN";
-    const isOpen = explicitlyClosed ? false : explicitlyOpen;
-
-    const cumulative = events.length
-      ? events[events.length - 1].cumulative_delta_a
-      : numericValue(session.cumulative_delta_a, session.net_delta_a) ?? 0;
-    return {
-      ...session,
-      id: firstPresent(session.id, session.operation_session_id),
-      status: isOpen ? "OPEN" : "CLOSED",
-      is_open: isOpen,
-      event_count: numericValue(session.event_count, events.length) ?? events.length,
-      cumulative_delta_a: cumulative,
-      net_delta_a: cumulative,
-      net_return_error_a: numericValue(
-        session.net_return_error_a,
-        Math.abs(cumulative),
-      ),
-      positive_delta_a: numericValue(
-        session.positive_delta_a,
-        events.reduce((sum, event) =>
-          sum + Math.max(0, event.current_delta_a), 0),
-      ),
-      negative_delta_a: numericValue(
-        session.negative_delta_a,
-        events.reduce((sum, event) =>
-          sum + Math.min(0, event.current_delta_a), 0),
-      ),
-      events,
-    };
-  }
-
-  function normalizeSessions(sessions, openOnly = false) {
-    const unique = new Map();
-    (sessions || []).map(normalizeSession).forEach((session) => {
-      if (session.id == null) return;
-      unique.set(String(session.id), session);
-    });
-    return [...unique.values()].filter((session) =>
-      !openOnly || session.is_open
-    );
-  }
-
   function labelFor(appliance, action) {
     return `${applianceLabels[appliance] || appliance} — ${actionLabels[action] || action}`;
   }
@@ -365,7 +160,7 @@
   }
 
   async function loadSummary() {
-    const response = await apiFetch(`${API}/summary`, { cache: "no-store" });
+    const response = await fetch(`${API}/summary`, { cache: "no-store" });
     if (response.ok) renderSummary(await response.json());
   }
 
@@ -475,7 +270,7 @@
   }
 
   async function loadDatasetVersions() {
-    const response = await apiFetch(`${API}/datasets`, {
+    const response = await fetch(`${API}/datasets`, {
       cache: "no-store",
     });
     const payload = await response.json();
@@ -515,7 +310,7 @@
     );
 
     try {
-      const response = await apiFetch(
+      const response = await fetch(
         `${API}/datasets/${selectedVersion}/activate`,
         { method: "POST" },
       );
@@ -575,7 +370,7 @@
     setDatasetMessage("در حال آرشیو دیتاست قبلی…");
 
     try {
-      const response = await apiFetch(
+      const response = await fetch(
         `${API}/datasets/start-new`,
         { method: "POST" },
       );
@@ -630,89 +425,6 @@
     return remain
       ? `${hours.toLocaleString("fa-IR")} ساعت و ${remain.toLocaleString("fa-IR")} دقیقه`
       : `${hours.toLocaleString("fa-IR")} ساعت`;
-  }
-
-  function sessionsFromHistory(labels, limit = 200, openOnly = false) {
-    const groups = new Map();
-    normalizeEvents(labels).forEach((label) => {
-      if (
-        label.review_status !== "CONFIRMED" ||
-        label.operation_session_id == null
-      ) return;
-      const key = String(label.operation_session_id);
-      if (!groups.has(key)) groups.set(key, []);
-      groups.get(key).push(label);
-    });
-
-    return [...groups.entries()].map(([id, group]) => {
-      group.sort((a, b) => {
-        const indexDelta = Number(a.session_event_index || 0) -
-          Number(b.session_event_index || 0);
-        if (indexDelta) return indexDelta;
-        return new Date(a.event_started_at || a.created_at || 0) -
-          new Date(b.event_started_at || b.created_at || 0);
-      });
-      const first = group[0];
-      const last = group[group.length - 1];
-      let cumulative = 0;
-      const events = group.map((item) => {
-        const delta = Number(
-          item.allocated_current_delta_a ??
-          item.allocated_delta_a ??
-          item.current_delta_a ?? 0
-        );
-        cumulative += delta;
-        return {
-          ...item,
-          current_delta_a: delta,
-          cumulative_delta_a: cumulative,
-        };
-      });
-      const lastPhase = String(last.session_phase || "").toUpperCase();
-      const closed = ["SHUTDOWN", "END", "CLOSE", "CLOSED"].includes(lastPhase);
-      const startedAt = first.event_started_at || first.created_at;
-      const lastAt = last.event_started_at || last.updated_at || last.created_at;
-      const startDate = parseEventDate(startedAt);
-      const lastDate = parseEventDate(lastAt);
-      return {
-        id,
-        operation_session_id: id,
-        appliance_type: first.appliance_type,
-        custom_appliance_name: first.custom_appliance_name || null,
-        status: closed ? "CLOSED" : "OPEN",
-        is_open: !closed,
-        started_at: startedAt,
-        ended_at: closed ? lastAt : null,
-        last_event_at: lastAt,
-        duration_seconds: startDate && lastDate
-          ? Math.max(0, (lastDate - startDate) / 1000)
-          : 0,
-        event_count: events.length,
-        cumulative_delta_a: cumulative,
-        net_delta_a: cumulative,
-        net_return_error_a: Math.abs(cumulative),
-        positive_delta_a: events.reduce(
-          (sum, event) => sum + Math.max(0, Number(event.current_delta_a)), 0
-        ),
-        negative_delta_a: events.reduce(
-          (sum, event) => sum + Math.min(0, Number(event.current_delta_a)), 0
-        ),
-        events,
-      };
-    }).filter((session) => !openOnly || session.is_open)
-      .sort((a, b) => new Date(b.started_at || 0) - new Date(a.started_at || 0))
-      .slice(0, limit);
-  }
-
-  async function historySessionsFallback(limit = 200, openOnly = false) {
-    const response = await apiFetch(`${API}/history?limit=1000`, {
-      cache: "no-store",
-    });
-    const payload = await response.json();
-    if (!response.ok) {
-      throw new Error(payload.detail || "دریافت تاریخچه چرخه‌ها ناموفق بود");
-    }
-    return sessionsFromHistory(payload.labels || [], limit, openOnly);
   }
 
   function svgElement(name, attributes = {}) {
@@ -937,7 +649,7 @@
   }
 
   function renderCycleVisuals(payload) {
-    const sessions = normalizeSessions(payload.sessions || []);
+    const sessions = payload.sessions || [];
     state.cycleVisualSessions = sessions;
 
     const filter = $("cycle-visual-filter").value;
@@ -1050,7 +762,7 @@
   }
 
   async function loadCycleVisuals() {
-    const response = await apiFetch(
+    const response = await fetch(
       `${API}/sessions/recent?limit=30&include_archived=false`,
       { cache: "no-store" },
     );
@@ -1059,9 +771,6 @@
       throw new Error(
         payload.detail || "دریافت نمودار چرخه‌ها ناموفق بود"
       );
-    }
-    if (!(payload.sessions || []).length) {
-      payload.sessions = await historySessionsFallback(30, false);
     }
     renderCycleVisuals(payload);
   }
@@ -1114,7 +823,7 @@
   }
 
   function renderOpenSessions(payload) {
-    const sessions = normalizeSessions(payload.sessions || [], true);
+    const sessions = payload.sessions || [];
     state.openSessions = sessions;
 
     const list = $("open-cycles-list");
@@ -1201,7 +910,7 @@
   }
 
   async function loadOpenSessions() {
-    const response = await apiFetch(`${API}/sessions/open?limit=200`, {
+    const response = await fetch(`${API}/sessions/open?limit=200`, {
       cache: "no-store",
     });
     const payload = await response.json();
@@ -1212,9 +921,6 @@
       );
     }
 
-    if (!(payload.sessions || []).length) {
-      payload.sessions = await historySessionsFallback(200, true);
-    }
     renderOpenSessions(payload);
   }
 
@@ -1276,7 +982,7 @@
   }
 
   async function loadSampleCounts() {
-    const response = await apiFetch(`${API}/sample-counts?ready_per_direction=20`, { cache: "no-store" });
+    const response = await fetch(`${API}/sample-counts?ready_per_direction=20`, { cache: "no-store" });
     if (response.ok) renderSampleCounts(await response.json());
   }
 
@@ -1292,12 +998,12 @@
     $("fridge-ready").textContent = ready ? "آماده استفاده" : "در حال یادگیری";
     $("fridge-ready").className = ready ? "ready-yes" : "ready-no";
     $("profile-readiness").textContent = ready
-      ? "نمونه کافی بر اساس شروع و پایان واقعی چرخه‌ها جمع شده است."
-      : "فقط STARTUP و SHUTDOWN شمارش می‌شوند؛ حداقل ۴ شروع، ۴ پایان و ۲ چرخه کامل لازم است.";
+      ? "نمونه کافی برای ورود کنترل‌شده به الگوریتم جمع شده است."
+      : "حداقل ۴ روشن‌شدن، ۴ خاموش‌شدن و ۲ چرخه کامل لازم است.";
   }
 
   async function loadFridgeProfile() {
-    const response = await apiFetch(`${API}/fridge-profile`, { cache: "no-store" });
+    const response = await fetch(`${API}/fridge-profile`, { cache: "no-store" });
     if (response.ok) renderFridgeProfile(await response.json());
   }
 
@@ -1305,7 +1011,7 @@
     const button = $("rebuild-profile-button");
     button.disabled = true;
     try {
-      const response = await apiFetch(`${API}/fridge-profile/rebuild`, { method: "POST" });
+      const response = await fetch(`${API}/fridge-profile/rebuild`, { method: "POST" });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.detail || "محاسبه پروفایل ناموفق بود");
       renderFridgeProfile(payload.profile);
@@ -1467,11 +1173,11 @@
   }
 
   async function loadTodayEvents({ silent = false } = {}) {
-    const response = await apiFetch(`${API}/today?limit=100`, { cache: "no-store" });
+    const response = await fetch(`${API}/today?limit=100`, { cache: "no-store" });
     const payload = await response.json();
     if (!response.ok) throw new Error(payload.detail || "دریافت رویدادهای امروز ناموفق بود");
 
-    const incoming = normalizeEvents(payload.events);
+    const incoming = payload.events || [];
     const newestId = incoming.reduce((max, event) => Math.max(max, Number(event.id) || 0), 0);
     if (state.initialEventsLoaded && newestId > (state.newestSeenEventId || 0)) {
       await playNewEventSound();
@@ -1540,7 +1246,7 @@
   }
 
   async function loadUnansweredEvents() {
-    const response = await apiFetch(`${API}/unanswered?limit=1000`, {
+    const response = await fetch(`${API}/unanswered?limit=1000`, {
       cache: "no-store",
     });
     const payload = await response.json();
@@ -1549,7 +1255,7 @@
         payload.detail || "دریافت رویدادهای پاسخ‌داده‌نشده ناموفق بود"
       );
     }
-    state.unansweredEvents = normalizeEvents(payload.events);
+    state.unansweredEvents = payload.events || [];
     state.unansweredLoaded = true;
     renderUnansweredList(state.unansweredEvents);
   }
@@ -1593,7 +1299,7 @@
     const body = $("pending-body");
 
     try {
-      const response = await apiFetch(`${API}/pending?limit=500`, {
+      const response = await fetch(`${API}/pending?limit=500`, {
         cache: "no-store",
       });
       const payload = await response.json();
@@ -1604,7 +1310,7 @@
         );
       }
 
-      state.pendingEvents = normalizeEvents(payload.events);
+      state.pendingEvents = payload.events || [];
       state.pendingLoaded = true;
       renderPendingList(state.pendingEvents);
     } catch (error) {
@@ -1629,7 +1335,7 @@
   function renderHistory(payload) {
     const body = $("history-body");
     body.replaceChildren();
-    const labels = normalizeEvents(payload.labels).sort((a, b) => {
+    const labels = [...(payload.labels || [])].sort((a, b) => {
       const timeA = new Date(
         a.event_started_at || a.updated_at || a.created_at || 0
       ).getTime();
@@ -1641,7 +1347,7 @@
     });
     state.historyLabels = labels;
     if (!labels.length) {
-      body.innerHTML = '<tr><td colspan="11" class="table-empty">هنوز پاسخی ثبت نشده است.</td></tr>';
+      body.innerHTML = '<tr><td colspan="8" class="table-empty">هنوز پاسخی ثبت نشده است.</td></tr>';
       return;
     }
 
@@ -1674,9 +1380,6 @@
         </td>
         <td>${actionLabels[label.action] || label.action}</td>
         <td dir="ltr">${number(label.current_delta_a, 3, " A")}</td>
-        <td dir="ltr">${number(label.temperature_delta_c, 3, " °C")}</td>
-        <td dir="ltr">${number(label.humidity_delta_rh, 3, " %RH")}</td>
-        <td dir="ltr">${number(label.illuminance_delta_lux, 1, " lux")}</td>
         <td>${label.notes || "—"}</td>
       `;
       const actionsCell = document.createElement("td");
@@ -1703,7 +1406,7 @@
   }
 
   async function loadHistory() {
-    const response = await apiFetch(`${API}/history?limit=100`, { cache: "no-store" });
+    const response = await fetch(`${API}/history?limit=100`, { cache: "no-store" });
     const payload = await response.json();
     if (!response.ok) throw new Error(payload.detail || "دریافت تاریخچه ناموفق بود");
     state.historyLoaded = true;
@@ -1759,18 +1462,31 @@
     $("edit-label-dialog").showModal();
   }
 
-  function apiErrorMessage(payload, fallback) {
-    const detail = payload?.detail ?? payload?.message ?? payload?.error;
-    if (typeof detail === "string" && detail.trim()) return detail;
-    if (detail && typeof detail === "object") {
-      return detail.message || detail.details || JSON.stringify(detail);
-    }
-    return fallback;
-  }
-
   function closeEditDialog() {
     state.editingLabel = null;
     $("edit-label-dialog").close();
+  }
+
+  async function refreshAfterMutation(fridgeProfile = null) {
+    // Keep UI consistent after a save/edit/delete, but do not download closed
+    // panels or duplicate the fridge profile that the save endpoint already
+    // returned. Write semantics are unchanged; this only reduces read traffic.
+    if (fridgeProfile) renderFridgeProfile(fridgeProfile);
+
+    const tasks = [
+      loadSummary(),
+      loadSampleCounts(),
+      loadTodayEvents(),
+      loadOpenSessions(),
+      loadCycleVisuals(),
+    ];
+
+    if (!fridgeProfile) tasks.push(loadFridgeProfile());
+    if ($("pending-details").open) tasks.push(loadPendingEvents());
+    if ($("unanswered-details").open) tasks.push(loadUnansweredEvents());
+    if (state.historyLoaded) tasks.push(loadHistory());
+
+    await Promise.all(tasks);
   }
 
   async function saveEditedLabel(event) {
@@ -1781,7 +1497,7 @@
     try {
       const applianceType = $("edit-appliance-type").value;
       const customName = $("edit-custom-appliance-name").value.trim();
-      const response = await apiFetch(`${API}/labels/${state.editingLabel.id}`, {
+      const response = await fetch(`${API}/labels/${state.editingLabel.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1811,12 +1527,10 @@
           review_target: $("edit-review-target").value,
         }),
       });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(apiErrorMessage(payload, "ویرایش پاسخ ناموفق بود"));
-      }
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.detail || "ویرایش پاسخ ناموفق بود");
       closeEditDialog();
-      await Promise.all([loadSummary(), loadSampleCounts(), loadFridgeProfile(), loadHistory(), loadPendingEvents(), loadUnansweredEvents(), loadTodayEvents(), loadOpenSessions(), loadCycleVisuals()]);
+      await refreshAfterMutation(payload.label?.fridge_profile || null);
     } catch (error) {
       $("edit-message").textContent = error.message || "خطا در ویرایش";
       $("edit-message").className = "message error";
@@ -1827,10 +1541,10 @@
 
   async function deleteTrainingLabel(label) {
     if (!window.confirm(`پاسخ «${historyDeviceName(label)}» حذف شود؟`)) return;
-    const response = await apiFetch(`${API}/labels/${label.id}`, { method: "DELETE" });
+    const response = await fetch(`${API}/labels/${label.id}`, { method: "DELETE" });
     const payload = await response.json();
     if (!response.ok) return setHistoryMessage(payload.detail || "حذف ناموفق بود", "error");
-    await Promise.all([loadHistory(), loadSummary(), loadSampleCounts(), loadFridgeProfile(), loadPendingEvents(), loadUnansweredEvents(), loadTodayEvents(), loadOpenSessions(), loadCycleVisuals()]);
+    await refreshAfterMutation(null);
   }
 
 
@@ -2095,7 +1809,7 @@
     state.busy = true;
     $("save-combined-event").disabled = true;
     try {
-      const response = await apiFetch(
+      const response = await fetch(
         `${API}/events/${state.current.id}/combined-label`,
         {
           method: "POST",
@@ -2131,17 +1845,7 @@
       state.current = null;
       state.currentSource = "today";
       resetCombinedPanel();
-      await Promise.all([
-        loadSummary(),
-        loadSampleCounts(),
-        loadFridgeProfile(),
-        loadTodayEvents(),
-        loadPendingEvents(),
-        loadUnansweredEvents(),
-        loadOpenSessions(),
-        loadCycleVisuals(),
-        state.historyLoaded ? loadHistory() : Promise.resolve(),
-      ]);
+      await refreshAfterMutation(payload.fridge_profile || null);
     } catch (error) {
       setMessage(error.message || "خطا در ثبت ترکیبی", "error");
     } finally {
@@ -2170,7 +1874,7 @@
     state.busy = true;
     document.querySelectorAll(".answer-button").forEach((button) => button.disabled = true);
     try {
-      const response = await apiFetch(`${API}/events/${state.current.id}/label`, {
+      const response = await fetch(`${API}/events/${state.current.id}/label`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -2204,12 +1908,7 @@
 
       state.current = null;
       state.currentSource = "today";
-      await Promise.all([
-        loadSummary(), loadSampleCounts(), loadFridgeProfile(),
-        loadTodayEvents(), loadPendingEvents(), loadUnansweredEvents(),
-        loadOpenSessions(),
-        state.historyLoaded ? loadHistory() : Promise.resolve(),
-      ]);
+      await refreshAfterMutation(payload.fridge_profile || null);
     } catch (error) {
       setMessage(error.message || "خطا در ذخیره پاسخ", "error");
     } finally {
@@ -2252,12 +1951,18 @@
 
   function startPolling() {
     if (state.pollTimer) clearInterval(state.pollTimer);
+    let pollTick = 0;
     state.pollTimer = setInterval(async () => {
       if (!state.busy) {
         try {
+          pollTick += 1;
           await loadTodayEvents({ silent: true });
           await loadOpenSessions();
-          await loadCycleVisuals();
+
+          // Cycle visual reconstruction is much heavier than the current-event
+          // poll, so refresh it once per minute instead of every five seconds.
+          if (pollTick % 2 === 0) await loadCycleVisuals();
+
           if ($("unanswered-details").open) {
             await loadUnansweredEvents();
           }
@@ -2266,7 +1971,7 @@
           }
         } catch (_) {}
       }
-    }, 5000);
+    }, 30000);
   }
 
   $("combined-event-toggle").addEventListener(
@@ -2397,7 +2102,7 @@
   $("cancel-edit-button").addEventListener("click", closeEditDialog);
 
   async function loadUnansweredCount() {
-    const response = await apiFetch(`${API}/unanswered?limit=2000`, {
+    const response = await fetch(`${API}/unanswered-count`, {
       cache: "no-store",
     });
     if (!response.ok) return;
