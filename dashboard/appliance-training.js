@@ -59,6 +59,7 @@
     soundEnabled: localStorage.getItem("applianceEventSoundEnabled") === "true",
     audioContext: null,
     pollTimer: null,
+    pollTick: 0,
     newestSeenEventId: null,
     initialEventsLoaded: false,
     pendingUnknownAction: null,
@@ -1301,6 +1302,31 @@
     if (response.ok) renderFridgeProfile(await response.json());
   }
 
+  async function refreshAfterWrite({ includeCycleVisuals = false } = {}) {
+    const tasks = [
+      loadSummary(),
+      loadSampleCounts(),
+      loadFridgeProfile(),
+      loadTodayEvents(),
+      loadOpenSessions(),
+      $("pending-details").open
+        ? loadPendingEvents()
+        : Promise.resolve(),
+      $("unanswered-details").open
+        ? loadUnansweredEvents()
+        : loadUnansweredCount(),
+      state.historyLoaded
+        ? loadHistory()
+        : Promise.resolve(),
+    ];
+
+    if (includeCycleVisuals) {
+      tasks.push(loadCycleVisuals());
+    }
+
+    await Promise.all(tasks);
+  }
+
   async function rebuildFridgeProfile() {
     const button = $("rebuild-profile-button");
     button.disabled = true;
@@ -1816,7 +1842,7 @@
         throw new Error(apiErrorMessage(payload, "ویرایش پاسخ ناموفق بود"));
       }
       closeEditDialog();
-      await Promise.all([loadSummary(), loadSampleCounts(), loadFridgeProfile(), loadHistory(), loadPendingEvents(), loadUnansweredEvents(), loadTodayEvents(), loadOpenSessions(), loadCycleVisuals()]);
+      await refreshAfterWrite({ includeCycleVisuals: true });
     } catch (error) {
       $("edit-message").textContent = error.message || "خطا در ویرایش";
       $("edit-message").className = "message error";
@@ -1830,7 +1856,7 @@
     const response = await apiFetch(`${API}/labels/${label.id}`, { method: "DELETE" });
     const payload = await response.json();
     if (!response.ok) return setHistoryMessage(payload.detail || "حذف ناموفق بود", "error");
-    await Promise.all([loadHistory(), loadSummary(), loadSampleCounts(), loadFridgeProfile(), loadPendingEvents(), loadUnansweredEvents(), loadTodayEvents(), loadOpenSessions(), loadCycleVisuals()]);
+    await refreshAfterWrite({ includeCycleVisuals: true });
   }
 
 
@@ -2131,17 +2157,7 @@
       state.current = null;
       state.currentSource = "today";
       resetCombinedPanel();
-      await Promise.all([
-        loadSummary(),
-        loadSampleCounts(),
-        loadFridgeProfile(),
-        loadTodayEvents(),
-        loadPendingEvents(),
-        loadUnansweredEvents(),
-        loadOpenSessions(),
-        loadCycleVisuals(),
-        state.historyLoaded ? loadHistory() : Promise.resolve(),
-      ]);
+      await refreshAfterWrite({ includeCycleVisuals: true });
     } catch (error) {
       setMessage(error.message || "خطا در ثبت ترکیبی", "error");
     } finally {
@@ -2204,12 +2220,7 @@
 
       state.current = null;
       state.currentSource = "today";
-      await Promise.all([
-        loadSummary(), loadSampleCounts(), loadFridgeProfile(),
-        loadTodayEvents(), loadPendingEvents(), loadUnansweredEvents(),
-        loadOpenSessions(),
-        state.historyLoaded ? loadHistory() : Promise.resolve(),
-      ]);
+      await refreshAfterWrite({ includeCycleVisuals: false });
     } catch (error) {
       setMessage(error.message || "خطا در ذخیره پاسخ", "error");
     } finally {
@@ -2252,20 +2263,37 @@
 
   function startPolling() {
     if (state.pollTimer) clearInterval(state.pollTimer);
+    state.pollTick = 0;
+
     state.pollTimer = setInterval(async () => {
-      if (!state.busy) {
-        try {
-          await loadTodayEvents({ silent: true });
+      if (state.busy) return;
+
+      state.pollTick += 1;
+
+      try {
+        // Keep new-event detection responsive.
+        await loadTodayEvents({ silent: true });
+
+        // Open-cycle cards do not need a full rebuild every 5 seconds.
+        if (state.pollTick % 6 === 0) {
           await loadOpenSessions();
+        }
+
+        // Cycle charts are much heavier; refresh once per minute.
+        if (state.pollTick % 12 === 0) {
           await loadCycleVisuals();
+        }
+
+        // Large queue tables are refreshed only while visible, every 15 sec.
+        if (state.pollTick % 3 === 0) {
           if ($("unanswered-details").open) {
             await loadUnansweredEvents();
           }
           if ($("pending-details").open) {
             await loadPendingEvents();
           }
-        } catch (_) {}
-      }
+        }
+      } catch (_) {}
     }, 5000);
   }
 
@@ -2397,7 +2425,7 @@
   $("cancel-edit-button").addEventListener("click", closeEditDialog);
 
   async function loadUnansweredCount() {
-    const response = await apiFetch(`${API}/unanswered?limit=2000`, {
+    const response = await apiFetch(`${API}/unanswered-count`, {
       cache: "no-store",
     });
     if (!response.ok) return;
