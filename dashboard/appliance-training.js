@@ -1327,6 +1327,16 @@
     await Promise.all(tasks);
   }
 
+  function refreshAfterWriteInBackground(options = {}) {
+    // A successful write is already committed in the Edge Function/database.
+    // Do not keep the answer buttons locked while dashboard statistics/lists
+    // are being re-read. Any read-side refresh failure is non-destructive and
+    // will be retried by polling/manual refresh.
+    refreshAfterWrite(options).catch((error) => {
+      console.error("Post-write dashboard refresh failed:", error);
+    });
+  }
+
   async function rebuildFridgeProfile() {
     const button = $("rebuild-profile-button");
     button.disabled = true;
@@ -1842,7 +1852,7 @@
         throw new Error(apiErrorMessage(payload, "ویرایش پاسخ ناموفق بود"));
       }
       closeEditDialog();
-      await refreshAfterWrite({ includeCycleVisuals: true });
+      refreshAfterWriteInBackground({ includeCycleVisuals: true });
     } catch (error) {
       $("edit-message").textContent = error.message || "خطا در ویرایش";
       $("edit-message").className = "message error";
@@ -1856,7 +1866,7 @@
     const response = await apiFetch(`${API}/labels/${label.id}`, { method: "DELETE" });
     const payload = await response.json();
     if (!response.ok) return setHistoryMessage(payload.detail || "حذف ناموفق بود", "error");
-    await refreshAfterWrite({ includeCycleVisuals: true });
+    refreshAfterWriteInBackground({ includeCycleVisuals: true });
   }
 
 
@@ -2157,7 +2167,10 @@
       state.current = null;
       state.currentSource = "today";
       resetCombinedPanel();
-      await refreshAfterWrite({ includeCycleVisuals: true });
+
+      state.busy = false;
+      $("save-combined-event").disabled = false;
+      refreshAfterWriteInBackground({ includeCycleVisuals: true });
     } catch (error) {
       setMessage(error.message || "خطا در ثبت ترکیبی", "error");
     } finally {
@@ -2220,12 +2233,22 @@
 
       state.current = null;
       state.currentSource = "today";
-      await refreshAfterWrite({ includeCycleVisuals: false });
+
+      // The write has succeeded. Release the UI immediately; the expensive
+      // read-only cards/lists can update in the background.
+      state.busy = false;
+      document.querySelectorAll(".answer-button").forEach(
+        (button) => button.disabled = false
+      );
+      refreshAfterWriteInBackground({ includeCycleVisuals: false });
     } catch (error) {
       setMessage(error.message || "خطا در ذخیره پاسخ", "error");
     } finally {
+      // Keep failure/cancel paths safe. On success these are already released.
       state.busy = false;
-      document.querySelectorAll(".answer-button").forEach((button) => button.disabled = false);
+      document.querySelectorAll(".answer-button").forEach(
+        (button) => button.disabled = false
+      );
     }
   }
 
