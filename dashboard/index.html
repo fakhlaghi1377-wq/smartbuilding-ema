@@ -228,31 +228,24 @@
                     <div id="portable-ac-badge" class="large-badge neutral">NO DATA</div>
                     <p id="portable-ac-details" class="sensor-label">Waiting for vibration data…</p>
                 </article>
-                <article class="data-card energy-card prediction-card">
-                    <h3>Portable Air Conditioner Prediction</h3>
-                    <div id="portable-ac-prediction-badge" class="large-badge neutral">NO DATA</div>
-                    <p id="portable-ac-prediction-details" class="sensor-label">Waiting for the current-based prediction…</p>
-                </article>
-                <article class="data-card energy-card prediction-card fridge-prediction-card">
-                    <h3>Refrigerator Prediction</h3>
-                    <div id="fridge-prediction-badge" class="large-badge neutral">NO DATA</div>
-                    <p id="fridge-prediction-details" class="sensor-label">Waiting for the refrigerator prediction…</p>
-                </article>
-                <article class="data-card energy-card cooling-card">
-                    <h3>Ducted Air Conditioner</h3>
-                    <div id="ducted-ac-badge" class="large-badge neutral">NO DATA</div>
-                    <p class="sensor-label">Vibration sensor not connected yet</p>
-                </article>
+                
+                
+                
                 <article class="data-card energy-card training-card">
                     <h3>Appliance Cloud Training</h3>
                     <a class="training-card-button" href="appliance-training.html">Open Training Dashboard</a>
                     <p class="sensor-label">Review and label appliance events in the cloud training site</p>
                 </article>
+                <article class="data-card energy-card live-prediction-card">
+                    <h3>Live Appliance Prediction</h3>
+                    <a class="live-prediction-card-button" href="live-appliance-predictions.html">Open Live Prediction Dashboard</a>
+                    <p class="sensor-label">View live XGBoost predictions, appliance states, load history, and model evaluation</p>
+                </article>
             </section>
 
             <section class="charts-heading dashboard-page-section" data-dashboard-page="energy">
                 <div>
-                    <h2>Energy Trends</h2>
+                    <h2>Energy Trends & Sensor-Based Cooling</h2>
                     <p id="energy-history-summary">Loading history…</p>
                 </div>
             </section>
@@ -261,8 +254,8 @@
                 <article class="chart-card"><h3>Real Power History</h3><div class="chart-container"><canvas id="power-chart"></canvas></div></article>
                 <article class="chart-card"><h3>Cumulative Energy History</h3><div class="chart-container"><canvas id="energy-total-chart"></canvas></div></article>
                 <article class="chart-card appliance-history-card"><h3>Portable AC — Vibration Sensor</h3><div class="chart-container appliance-state-chart"><canvas id="portable-ac-state-chart"></canvas></div></article>
-                <article class="chart-card appliance-history-card"><h3>Portable AC — Prediction</h3><div class="chart-container appliance-state-chart"><canvas id="portable-ac-prediction-chart"></canvas></div></article>
-                <article class="chart-card appliance-history-card"><h3>Refrigerator — Prediction</h3><div class="chart-container appliance-state-chart"><canvas id="fridge-prediction-chart"></canvas></div></article>
+                
+                
             </section>
 
             <section class="toolbar dashboard-page-section" data-dashboard-page="window">
