@@ -24,11 +24,10 @@ function estimateAddedWatts(deltaA){
  return a*220*0.90;
 }
 function loadWarning(watts,action){
- if(action!=="ON")return {text:"خاموش / بدون بار فعال",klass:"neutral"};
+ if(action!=="ON")return null;
  if(watts>=1000)return {text:"⚠ مصرف بسیار بالا",klass:"very-high"};
  if(watts>=500)return {text:"⚠ مصرف بالا",klass:"high"};
- if(watts>=150)return {text:"مصرف متوسط",klass:"low"};
- return {text:"مصرف کم",klass:"low"};
+ return null;
 }
 function formatDeltaA(value){
  const n=Number(value);
@@ -49,8 +48,8 @@ function states(rows){
 
      if(a==="UNKNOWN"){
        $("unknown-power").textContent="توان افزوده تقریبی: —";
-       $("unknown-warning").textContent="در انتظار بار نامشخص";
-       $("unknown-warning").className="load-warning neutral";
+       $("unknown-warning").textContent="";
+       $("unknown-warning").className="load-warning hidden";
      }
      continue;
    }
@@ -68,8 +67,13 @@ function states(rows){
        ? `توان افزوده تقریبی: ${Math.round(watts)} W`
        : `توان کاهشی تقریبی: ${Math.round(watts)} W`;
      const w=loadWarning(watts,act);
-     $("unknown-warning").textContent=w.text;
-     $("unknown-warning").className=`load-warning ${w.klass}`;
+     if(w){
+       $("unknown-warning").textContent=w.text;
+       $("unknown-warning").className=`load-warning ${w.klass}`;
+     }else{
+       $("unknown-warning").textContent="";
+       $("unknown-warning").className="load-warning hidden";
+     }
    }
  }
 }

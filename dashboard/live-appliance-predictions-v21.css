@@ -167,3 +167,5 @@
   text-align:right;
   font-variant-numeric:tabular-nums;
 }
+
+.hidden{display:none!important}
