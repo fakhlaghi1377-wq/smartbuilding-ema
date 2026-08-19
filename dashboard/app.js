@@ -62,6 +62,7 @@ const OUTDOOR_WEATHER_COLUMNS = [
 ].join(",");
 
 const ENERGY_COLUMNS = [
+    "record_id",
     "recorded_at",
     "current_a",
     "apparent_power_va",
@@ -115,6 +116,14 @@ let refreshTimer = null;
 let refreshInProgress = false;
 let realtimeChannels = [];
 let charts = {};
+
+const historyCache = {
+    hours: null,
+    environment: [],
+    outdoor: [],
+    energy: [],
+    window: []
+};
 
 const byId = (id) => document.getElementById(id);
 
@@ -259,6 +268,51 @@ function updateLatest(reading) {
     }
 }
 
+function resetHistoryCache(hours = null) {
+    historyCache.hours = hours == null ? null : Number(hours);
+    historyCache.environment = [];
+    historyCache.outdoor = [];
+    historyCache.energy = [];
+    historyCache.window = [];
+}
+
+function pruneHistoryRows(rows, hours) {
+    const cutoff = Date.now() - Number(hours) * 60 * 60 * 1000;
+    return (rows || []).filter((row) => {
+        const time = new Date(row?.recorded_at).getTime();
+        return Number.isFinite(time) && time >= cutoff;
+    });
+}
+
+function mergeHistoryRows(existing, incoming, keyBuilder) {
+    const map = new Map();
+    for (const row of [...(existing || []), ...(incoming || [])]) {
+        if (!row?.recorded_at) continue;
+        map.set(keyBuilder(row), row);
+    }
+    return [...map.values()].sort(
+        (a, b) => new Date(a.recorded_at) - new Date(b.recorded_at)
+    );
+}
+
+function newestRecordedAt(rows) {
+    for (let index = (rows || []).length - 1; index >= 0; index -= 1) {
+        if (rows[index]?.recorded_at) return rows[index].recorded_at;
+    }
+    return null;
+}
+
+async function fetchPagedRows(buildQuery, pageSize, maxRows) {
+    const rows = [];
+    for (let from = 0; from < maxRows; from += pageSize) {
+        const { data, error } = await buildQuery(from, from + pageSize - 1);
+        if (error) throw error;
+        rows.push(...(data || []));
+        if (!data || data.length < pageSize) break;
+    }
+    return rows;
+}
+
 async function fetchLatestReading() {
     const query = client
         .from(CONFIG.ENVIRONMENT_TABLE)
@@ -275,28 +329,36 @@ async function fetchLatestReading() {
 }
 
 async function fetchHistory(hours) {
-    const since = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
+    const numericHours = Number(hours);
+    const since = new Date(Date.now() - numericHours * 60 * 60 * 1000).toISOString();
     const pageSize = Math.min(Math.max(Number(CONFIG.PAGE_SIZE) || 1000, 1), 1000);
     const maxRows = Math.max(Number(CONFIG.MAX_HISTORY_ROWS) || 10000, pageSize);
-    const rows = [];
 
-    for (let from = 0; from < maxRows; from += pageSize) {
+    if (historyCache.hours !== numericHours) resetHistoryCache(numericHours);
+
+    const queryStart = newestRecordedAt(historyCache.environment) || since;
+    const incoming = await fetchPagedRows((from, to) => {
         let query = client
             .from(CONFIG.ENVIRONMENT_TABLE)
             .select(ENVIRONMENT_COLUMNS)
-            .gte("recorded_at", since)
+            .gte("recorded_at", queryStart)
             .order("recorded_at", { ascending: true })
-            .range(from, from + pageSize - 1);
-
+            .range(from, to);
         if (CONFIG.ENVIRONMENT_DEVICE_ID) {
             query = query.eq("device_id", CONFIG.ENVIRONMENT_DEVICE_ID);
         }
-        const { data, error } = await query;
-        if (error) throw error;
-        rows.push(...(data || []));
-        if (!data || data.length < pageSize) break;
-    }
-    return rows;
+        return query;
+    }, pageSize, maxRows);
+
+    historyCache.environment = pruneHistoryRows(
+        mergeHistoryRows(
+            historyCache.environment,
+            incoming,
+            (row) => String(row.record_id || `${row.device_id || ""}:${row.recorded_at}`)
+        ),
+        numericHours
+    );
+    return historyCache.environment;
 }
 
 async function fetchLatestOutdoorWeather() {
@@ -310,23 +372,30 @@ async function fetchLatestOutdoorWeather() {
 }
 
 async function fetchOutdoorWeatherHistory(hours) {
-    const since = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
+    const numericHours = Number(hours);
+    const since = new Date(Date.now() - numericHours * 60 * 60 * 1000).toISOString();
     const pageSize = Math.min(Math.max(Number(CONFIG.PAGE_SIZE) || 1000, 1), 1000);
     const maxRows = Math.max(Number(CONFIG.MAX_HISTORY_ROWS) || 10000, pageSize);
-    const rows = [];
 
-    for (let from = 0; from < maxRows; from += pageSize) {
-        const { data, error } = await client
+    if (historyCache.hours !== numericHours) resetHistoryCache(numericHours);
+
+    const queryStart = newestRecordedAt(historyCache.outdoor) || since;
+    const incoming = await fetchPagedRows(
+        (from, to) => client
             .from(CONFIG.OUTDOOR_WEATHER_TABLE)
             .select(OUTDOOR_WEATHER_COLUMNS)
-            .gte("recorded_at", since)
+            .gte("recorded_at", queryStart)
             .order("recorded_at", { ascending: true })
-            .range(from, from + pageSize - 1);
-        if (error) throw error;
-        rows.push(...(data || []));
-        if (!data || data.length < pageSize) break;
-    }
-    return rows;
+            .range(from, to),
+        pageSize,
+        maxRows
+    );
+
+    historyCache.outdoor = pruneHistoryRows(
+        mergeHistoryRows(historyCache.outdoor, incoming, (row) => String(row.recorded_at)),
+        numericHours
+    );
+    return historyCache.outdoor;
 }
 
 function windDirectionToCardinal(value) {
@@ -396,28 +465,36 @@ async function fetchLatestEnergy() {
 }
 
 async function fetchEnergyHistory(hours) {
-    const since = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
+    const numericHours = Number(hours);
+    const since = new Date(Date.now() - numericHours * 60 * 60 * 1000).toISOString();
     const pageSize = Math.min(Math.max(Number(CONFIG.PAGE_SIZE) || 1000, 1), 1000);
     const maxRows = Math.max(Number(CONFIG.MAX_HISTORY_ROWS) || 10000, pageSize);
-    const rows = [];
 
-    for (let from = 0; from < maxRows; from += pageSize) {
+    if (historyCache.hours !== numericHours) resetHistoryCache(numericHours);
+
+    const queryStart = newestRecordedAt(historyCache.energy) || since;
+    const incoming = await fetchPagedRows((from, to) => {
         let query = client
             .from(CONFIG.ENERGY_TABLE)
             .select(ENERGY_COLUMNS)
-            .gte("recorded_at", since)
+            .gte("recorded_at", queryStart)
             .order("recorded_at", { ascending: true })
-            .range(from, from + pageSize - 1);
-
+            .range(from, to);
         if (CONFIG.ENERGY_DEVICE_ID) {
             query = query.eq("device_id", CONFIG.ENERGY_DEVICE_ID);
         }
-        const { data, error } = await query;
-        if (error) throw error;
-        rows.push(...(data || []));
-        if (!data || data.length < pageSize) break;
-    }
-    return rows;
+        return query;
+    }, pageSize, maxRows);
+
+    historyCache.energy = pruneHistoryRows(
+        mergeHistoryRows(
+            historyCache.energy,
+            incoming,
+            (row) => String(row.record_id || row.recorded_at)
+        ),
+        numericHours
+    );
+    return historyCache.energy;
 }
 
 function updateLatestEnergy(reading) {
@@ -575,42 +652,63 @@ async function fetchWindowSummary() {
 }
 
 async function fetchWindowHistory(hours) {
-    const since = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
+    const numericHours = Number(hours);
+    const since = new Date(Date.now() - numericHours * 60 * 60 * 1000).toISOString();
+    if (historyCache.hours !== numericHours) resetHistoryCache(numericHours);
+
+    const plainRows = historyCache.window.filter((row) => !row._chartBoundary);
+    const lastSeen = newestRecordedAt(plainRows);
+
     let historyQuery = client
         .from(CONFIG.WINDOW_TABLE)
-        .select("recorded_at,window_state,is_transition")
+        .select("id,recorded_at,window_state,is_transition")
         .eq("is_transition", true)
-        .gte("recorded_at", since)
+        .gte("recorded_at", lastSeen || since)
         .order("recorded_at", { ascending: true })
         .limit(5000);
-    let previousStateQuery = client
-        .from(CONFIG.WINDOW_TABLE)
-        .select("recorded_at,window_state,is_transition")
-        .eq("is_transition", true)
-        .lt("recorded_at", since)
-        .order("recorded_at", { ascending: false })
-        .limit(1);
+
     if (CONFIG.WINDOW_DEVICE_ID) {
         historyQuery = historyQuery.eq("device_id", CONFIG.WINDOW_DEVICE_ID);
-        previousStateQuery = previousStateQuery.eq("device_id", CONFIG.WINDOW_DEVICE_ID);
     }
-    const [historyResult, previousStateResult] = await Promise.all([
-        historyQuery,
-        previousStateQuery
-    ]);
-    if (historyResult.error) throw historyResult.error;
-    if (previousStateResult.error) throw previousStateResult.error;
 
-    const rows = historyResult.data || [];
-    const previousState = previousStateResult.data?.[0];
-    if (previousState) {
-        rows.unshift({
-            ...previousState,
-            recorded_at: since,
-            _chartBoundary: true
-        });
+    const historyResult = await historyQuery;
+    if (historyResult.error) throw historyResult.error;
+
+    historyCache.window = pruneHistoryRows(
+        mergeHistoryRows(
+            plainRows,
+            historyResult.data || [],
+            (row) => String(row.id || row.recorded_at)
+        ),
+        numericHours
+    );
+
+    if (!lastSeen) {
+        let previousStateQuery = client
+            .from(CONFIG.WINDOW_TABLE)
+            .select("id,recorded_at,window_state,is_transition")
+            .eq("is_transition", true)
+            .lt("recorded_at", since)
+            .order("recorded_at", { ascending: false })
+            .limit(1);
+
+        if (CONFIG.WINDOW_DEVICE_ID) {
+            previousStateQuery = previousStateQuery.eq("device_id", CONFIG.WINDOW_DEVICE_ID);
+        }
+
+        const previousStateResult = await previousStateQuery;
+        if (previousStateResult.error) throw previousStateResult.error;
+        const previousState = previousStateResult.data?.[0];
+        if (previousState) {
+            historyCache.window.unshift({
+                ...previousState,
+                recorded_at: since,
+                _chartBoundary: true
+            });
+        }
     }
-    return rows;
+
+    return historyCache.window;
 }
 
 async function fetchPendingEma() {
@@ -1351,6 +1449,7 @@ function updateOutdoorCharts(rawRows, historyHours) {
 
 async function refreshDashboard() {
     if (!session || refreshInProgress) return;
+    if (document.visibilityState === "hidden") return;
     refreshInProgress = true;
 
     try {
@@ -1470,6 +1569,7 @@ function stopDashboard() {
     refreshTimer = null;
     for (const channel of realtimeChannels) client.removeChannel(channel);
     realtimeChannels = [];
+    resetHistoryCache();
 }
 
 function startDashboard() {
@@ -1526,7 +1626,10 @@ byId("login-form")?.addEventListener("submit", async (event) => {
 });
 
 byId("logout-button")?.addEventListener("click", () => client.auth.signOut());
-byId("history-hours")?.addEventListener("change", refreshDashboard);
+byId("history-hours")?.addEventListener("change", () => {
+    resetHistoryCache(Number(byId("history-hours")?.value || 24));
+    refreshDashboard();
+});
 window.addEventListener("online", refreshDashboard);
 window.addEventListener("offline", () => {
     updateConnectionStatus(false, "Internet disconnected");
