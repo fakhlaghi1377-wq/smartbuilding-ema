@@ -159,43 +159,139 @@ function renderLoadEventChart(rows){
     app:r.interpreted_appliance||r.predicted_appliance,
     action:r.interpreted_action||r.predicted_action,
     conf:r.interpreted_confidence??r.confidence,
-    context:!!r.interpretation_applied
-  }));
+    context:!!r.interpretation_applied,
+    eventId:r.event_id
+  }))
+  .filter(d=>Number.isFinite(d.t)&&Number.isFinite(d.power));
 
  if(!data.length){
    $("load-event-chart").innerHTML="<p class='muted'>داده‌ای نیست.</p>";
    return;
  }
 
- const W=1000,H=280,padL=55,padR=25,padT=20,padB=35;
+ const W=1080,H=340;
+ const padL=76,padR=28,padT=34,padB=48;
  const minT=Math.min(...data.map(d=>d.t));
  const maxT=Math.max(...data.map(d=>d.t));
  const spanT=Math.max(1,maxT-minT);
- const maxAbs=Math.max(100,...data.map(d=>Math.abs(d.power)));
+
+ // Give the largest event a little headroom so labels do not touch the border.
+ const rawMax=Math.max(100,...data.map(d=>Math.abs(d.power)));
+ const maxAbs=Math.ceil(rawMax*1.18/50)*50;
+
  const x=d=>padL+(d.t-minT)/spanT*(W-padL-padR);
  const y=p=>padT+(maxAbs-p)/(2*maxAbs)*(H-padT-padB);
  const zeroY=y(0);
 
- const grid=[-1,-0.5,0,0.5,1].map(k=>{
-   const val=maxAbs*k, yy=y(val);
-   return `<line x1="${padL}" y1="${yy}" x2="${W-padR}" y2="${yy}" stroke="currentColor" opacity="${k===0?0.28:0.10}"/>
-   <text x="2" y="${yy+4}" font-size="11" fill="currentColor">${Math.round(val)}W</text>`;
+ const fmtW=v=>{
+   const abs=Math.abs(v);
+   if(abs>=1000)return `${(v/1000).toFixed(abs>=10000?0:1)}kW`;
+   return `${Math.round(v)}W`;
+ };
+
+ const gridFractions=[-1,-0.5,0,0.5,1];
+ const grid=gridFractions.map(k=>{
+   const val=maxAbs*k;
+   const yy=y(val);
+   const strong=k===0;
+   return `
+     <line
+       x1="${padL}" y1="${yy}"
+       x2="${W-padR}" y2="${yy}"
+       class="${strong?"load-zero-line":"load-grid-line"}"
+     />
+     <text x="${padL-10}" y="${yy+4}" text-anchor="end" class="load-axis-label">${fmtW(val)}</text>
+   `;
  }).join("");
 
- const pts=data.map(d=>{
-   const r=d.app==="UNKNOWN"&&Math.abs(d.power)>=1000?7:5;
-   const marker=d.app==="UNKNOWN"&&Math.abs(d.power)>=1000?"⚡":"";
-   const title=`${tm(d.t)} | ${faApp(d.app)} ${faAct(d.action)} | ${Math.round(d.power)} W | ${pct(d.conf)}`;
-   return `<g><circle cx="${x(d)}" cy="${y(d.power)}" r="${r}" fill="currentColor" opacity="${d.context?1:0.72}"><title>${title}</title></circle>${marker?`<text x="${x(d)+8}" y="${y(d.power)-8}" font-size="15">${marker}</text>`:""}</g>`;
+ // Time ticks: start, 25%, 50%, 75%, end.
+ const timeTicks=[0,.25,.5,.75,1].map(f=>{
+   const tt=minT+spanT*f;
+   const xx=padL+(W-padL-padR)*f;
+   return `
+     <line x1="${xx}" y1="${padT}" x2="${xx}" y2="${H-padB}" class="load-time-grid"/>
+     <text x="${xx}" y="${H-17}" text-anchor="middle" class="load-axis-label">${tm(tt)}</text>
+   `;
  }).join("");
 
- $("load-event-chart").innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="رویدادهای تغییر بار">
- ${grid}
- <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${H-padB}" stroke="currentColor" opacity=".25"/>
- <line x1="${padL}" y1="${zeroY}" x2="${W-padR}" y2="${zeroY}" stroke="currentColor" opacity=".3"/>
- ${pts}
- <text x="${padL}" y="${H-8}" font-size="11" fill="currentColor">${tm(minT)}</text>
- <text x="${W-padR-85}" y="${H-8}" font-size="11" fill="currentColor">${tm(maxT)}</text>
+ const appShort=app=>({
+   FRIDGE:"یخچال",
+   PORTABLE_AC:"کولر",
+   MAIN_ROOM_LIGHT:"چراغ",
+   UNKNOWN:"نامشخص"
+ }[app]||app||"—");
+
+ function radiusFor(power){
+   // Magnitude-aware but capped so one microwave event does not dominate.
+   const scaled=4+Math.sqrt(Math.abs(power)/Math.max(1,maxAbs))*8;
+   return Math.max(4,Math.min(12,scaled));
+ }
+
+ function pointClass(d){
+   if(d.app==="UNKNOWN")return "load-point unknown";
+   if(d.power>=0)return "load-point load-on";
+   return "load-point load-off";
+ }
+
+ function shape(d,cx,cy,r){
+   const title=`event ${d.eventId} | ${appShort(d.app)} ${faAct(d.action)} | ${d.power>=0?"+":""}${Math.round(d.power)} W | اطمینان ${pct(d.conf)}${d.context?" | Context":""}`;
+
+   // UNKNOWN = diamond, ON = triangle up, OFF = triangle down.
+   if(d.app==="UNKNOWN"){
+     const pts=[
+       [cx,cy-r],[cx+r,cy],[cx,cy+r],[cx-r,cy]
+     ].map(p=>p.join(",")).join(" ");
+     return `<polygon points="${pts}" class="${pointClass(d)}${d.context?" context-point":""}"><title>${title}</title></polygon>`;
+   }
+
+   if(d.power>=0){
+     const pts=[
+       [cx,cy-r],[cx+r*.95,cy+r*.8],[cx-r*.95,cy+r*.8]
+     ].map(p=>p.join(",")).join(" ");
+     return `<polygon points="${pts}" class="${pointClass(d)}${d.context?" context-point":""}"><title>${title}</title></polygon>`;
+   }
+
+   const pts=[
+     [cx,cy+r],[cx+r*.95,cy-r*.8],[cx-r*.95,cy-r*.8]
+   ].map(p=>p.join(",")).join(" ");
+   return `<polygon points="${pts}" class="${pointClass(d)}${d.context?" context-point":""}"><title>${title}</title></polygon>`;
+ }
+
+ const points=data.map(d=>{
+   const cx=x(d),cy=y(d.power),r=radiusFor(d.power);
+   const highUnknown=d.app==="UNKNOWN"&&Math.abs(d.power)>=500;
+   const veryHighUnknown=d.app==="UNKNOWN"&&Math.abs(d.power)>=1000;
+
+   // Direct labels only where they add information.
+   const shouldLabel=veryHighUnknown || d.context || Math.abs(d.power)>=maxAbs*.72;
+   const label=shouldLabel
+     ? `<g class="load-direct-label">
+          <rect x="${Math.min(W-padR-118,cx+10)}" y="${Math.max(padT,cy-28)}" width="108" height="22" rx="7"></rect>
+          <text x="${Math.min(W-padR-110,cx+18)}" y="${Math.max(padT+15,cy-13)}">${appShort(d.app)} · ${fmtW(d.power)}</text>
+        </g>`
+     : "";
+
+   const bolt=veryHighUnknown
+     ? `<text x="${cx+10}" y="${cy-12}" class="high-load-bolt">⚡</text>`
+     : "";
+
+   const halo=highUnknown
+     ? `<circle cx="${cx}" cy="${cy}" r="${r+6}" class="unknown-high-halo"></circle>`
+     : "";
+
+   return `<g class="load-event-node">${halo}${shape(d,cx,cy,r)}${bolt}${label}</g>`;
+ }).join("");
+
+ $("load-event-chart").innerHTML=`
+ <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="تایم‌لاین تغییر بار وسایل">
+   <text x="${padL}" y="18" class="load-zone-label load-zone-on">افزایش بار / روشن‌شدن</text>
+   <text x="${padL}" y="${H-2}" class="load-zone-label load-zone-off">کاهش بار / خاموش‌شدن</text>
+
+   ${grid}
+   ${timeTicks}
+
+   <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${H-padB}" class="load-axis-line"/>
+   ${points}
  </svg>`;
 }
 

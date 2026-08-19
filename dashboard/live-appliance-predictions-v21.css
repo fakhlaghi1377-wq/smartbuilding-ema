@@ -29,3 +29,131 @@
  .timeline-row{grid-template-columns:95px 1fr}
  .load-event-chart{height:250px}
 }
+
+
+/* ===== Improved appliance load event timeline ===== */
+.load-event-chart{
+  height:360px;
+  position:relative;
+  margin-top:10px;
+  direction:ltr;
+}
+.load-event-chart svg{
+  width:100%;
+  height:100%;
+  display:block;
+  overflow:visible;
+}
+.load-grid-line{
+  stroke:currentColor;
+  opacity:.10;
+  stroke-width:1;
+}
+.load-time-grid{
+  stroke:currentColor;
+  opacity:.055;
+  stroke-width:1;
+}
+.load-zero-line{
+  stroke:currentColor;
+  opacity:.45;
+  stroke-width:1.8;
+}
+.load-axis-line{
+  stroke:currentColor;
+  opacity:.20;
+  stroke-width:1;
+}
+.load-axis-label{
+  fill:currentColor;
+  opacity:.62;
+  font-size:11px;
+}
+.load-zone-label{
+  fill:currentColor;
+  font-size:11px;
+  font-weight:700;
+  opacity:.62;
+}
+.load-zone-on{fill:var(--ok)}
+.load-zone-off{fill:var(--bad)}
+
+.load-point{
+  cursor:crosshair;
+  stroke-width:1.6;
+  transition:opacity .15s ease;
+}
+.load-event-node:hover .load-point{
+  opacity:1;
+  stroke-width:2.4;
+}
+.load-point.load-on{
+  fill:var(--ok);
+  stroke:color-mix(in srgb,var(--ok) 70%,#000);
+  opacity:.80;
+}
+.load-point.load-off{
+  fill:var(--bad);
+  stroke:color-mix(in srgb,var(--bad) 72%,#000);
+  opacity:.78;
+}
+.load-point.unknown{
+  fill:var(--warn);
+  stroke:color-mix(in srgb,var(--warn) 72%,#000);
+  opacity:.90;
+}
+.load-point.context-point{
+  stroke:#7c3aed;
+  stroke-width:3;
+}
+.unknown-high-halo{
+  fill:none;
+  stroke:var(--warn);
+  stroke-width:2;
+  opacity:.32;
+}
+.high-load-bolt{
+  font-size:18px;
+  dominant-baseline:middle;
+}
+.load-direct-label rect{
+  fill:var(--card);
+  stroke:var(--border);
+  stroke-width:1;
+  opacity:.96;
+}
+.load-direct-label text{
+  fill:var(--text);
+  font-size:10.5px;
+  font-weight:700;
+}
+.load-chart-legend{
+  align-items:center;
+  border-top:1px solid var(--border);
+  padding-top:10px;
+}
+.legend-chip{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+}
+.legend-symbol{
+  font-style:normal;
+  font-size:13px;
+  line-height:1;
+}
+.on-symbol{color:var(--ok)}
+.off-symbol{color:var(--bad)}
+.unknown-symbol{color:var(--warn)}
+.context-symbol{color:#7c3aed}
+.chart-footnote{
+  margin:8px 0 0;
+  color:var(--muted);
+  font-size:10.5px;
+  line-height:1.5;
+}
+
+@media(max-width:800px){
+  .load-event-chart{height:300px}
+  .load-direct-label{display:none}
+}

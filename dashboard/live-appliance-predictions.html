@@ -80,16 +80,19 @@
 <section class="card">
   <div class="head">
     <div>
-      <h2>رویدادهای تغییر بار</h2>
-      <p class="muted">توان افزوده/کاهشی تقریبی هر event بر اساس ΔI × 220V × 0.90.</p>
+      <h2>تایم‌لاین تغییر بار وسایل</h2>
+      <p class="muted">هر علامت یک تغییر شناسایی‌شده در بار الکتریکی خانه است؛ بالای خط صفر = افزایش بار و پایین خط صفر = کاهش بار.</p>
     </div>
   </div>
   <div id="load-event-chart" class="load-event-chart"></div>
-  <div class="chart-legend">
-    <span>● روشن‌شدن / افزایش بار</span>
-    <span>● خاموش‌شدن / کاهش بار</span>
-    <span>⚡ بار نامشخص پرمصرف</span>
+  <div class="chart-legend load-chart-legend">
+    <span class="legend-chip"><i class="legend-symbol on-symbol">▲</i> روشن‌شدن / افزایش بار</span>
+    <span class="legend-chip"><i class="legend-symbol off-symbol">▼</i> خاموش‌شدن / کاهش بار</span>
+    <span class="legend-chip"><i class="legend-symbol unknown-symbol">◆</i> بار نامشخص</span>
+    <span class="legend-chip"><i class="legend-symbol context-symbol">◉</i> اصلاح‌شده با Context</span>
+    <span class="legend-chip">⚡ بار نامشخص پرمصرف</span>
   </div>
+  <p class="chart-footnote">توان نمایش‌داده‌شده تقریبی است و از ΔI × 220V × 0.90 محاسبه می‌شود؛ این مقدار وات‌متر مستقیم دستگاه نیست.</p>
 </section>
 
 <section class="card">
