@@ -3,101 +3,168 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>پیش‌بینی زنده وسایل | SmartBuildingIoT</title>
-  <link rel="stylesheet" href="./live-appliance-predictions.css">
+  <title>پیش‌بینی زنده وسایل</title>
+  <link rel="stylesheet" href="./live-appliance-predictions-simple.css">
 </head>
 <body>
 <main class="shell">
   <header class="topbar">
     <div>
       <p class="eyebrow">SmartBuildingIoT · XGBoost v17 Hybrid</p>
-      <h1>پیش‌بینی زنده و ارزیابی وسایل</h1>
-      <p class="sub">خروجی مدل زنده، تاریخچه، توالی‌ها و مقایسه با پاسخ انسانی.</p>
+      <h1>پیش‌بینی زنده وسایل</h1>
+      <p class="sub">نمای ساده برای دیدن آخرین تشخیص‌ها و ارزیابی مدل.</p>
     </div>
+
     <nav>
-      <a href="/dashboard">داشبورد اصلی</a>
-      <a href="./appliance-training.html">سایت آموزش</a>
+      <a class="nav-primary"
+         href="https://fakhlaghi1377-wq.github.io/smartbuilding-ema/dashboard/index.html#environment">
+        داشبورد اصلی
+      </a>
+      <a href="./appliance-training.html">ثبت پاسخ آموزشی</a>
     </nav>
   </header>
 
-  <section class="live-grid">
-    <article class="card hero">
-      <div class="card-head"><h2>آخرین پیش‌بینی</h2><span id="live-dot" class="dot"></span></div>
-      <div id="latest-class" class="prediction">—</div>
-      <div class="hero-meta">
-        <div><span>اطمینان</span><strong id="latest-confidence">—</strong></div>
-        <div><span>ΔI</span><strong id="latest-delta">—</strong></div>
-        <div><span>Routing</span><strong id="latest-routing">—</strong></div>
-        <div><span>Sequence</span><strong id="latest-sequence">—</strong></div>
+  <section class="hero-grid">
+    <article class="card latest-card">
+      <div class="section-head">
+        <h2>آخرین تشخیص</h2>
+        <span id="live-dot" class="live-dot"></span>
       </div>
+
+      <div id="latest-device" class="latest-device">—</div>
+      <div id="latest-action" class="latest-action">—</div>
+
+      <div class="confidence-wrap">
+        <div class="confidence-label">
+          <span>اطمینان مدل</span>
+          <strong id="latest-confidence">—</strong>
+        </div>
+        <div class="confidence-bar">
+          <span id="confidence-fill"></span>
+        </div>
+      </div>
+
       <p id="latest-time" class="muted">در انتظار prediction…</p>
       <div id="latest-flags" class="flags"></div>
     </article>
 
-    <article class="card eval">
-      <div class="card-head"><h2>ارزیابی زنده مدل</h2><span id="model-version">—</span></div>
-      <div class="eval-grid">
-        <div><span>ارزیابی‌شده</span><strong id="eval-count">—</strong></div>
-        <div><span>درست</span><strong id="eval-correct">—</strong></div>
-        <div><span>Accuracy</span><strong id="eval-accuracy">—</strong></div>
-        <div><span>Macro-F1</span><strong id="eval-f1">—</strong></div>
-        <div><span>منتظر پاسخ انسانی</span><strong id="eval-waiting">—</strong></div>
-        <div><span>ترکیبی خارج از معیار</span><strong id="eval-combined">—</strong></div>
+    <article class="card eval-card">
+      <h2>ارزیابی مدل</h2>
+
+      <div class="metrics">
+        <div class="metric">
+          <span>Accuracy</span>
+          <strong id="eval-accuracy">—</strong>
+        </div>
+        <div class="metric">
+          <span>Macro-F1</span>
+          <strong id="eval-f1">—</strong>
+        </div>
+        <div class="metric">
+          <span>ارزیابی‌شده</span>
+          <strong id="eval-count">—</strong>
+        </div>
+        <div class="metric">
+          <span>منتظر پاسخ</span>
+          <strong id="eval-waiting">—</strong>
+        </div>
       </div>
-      <p class="muted">Ground Truth از آخرین پاسخ CONFIRMED همان event گرفته می‌شود؛ رویدادهای ترکیبی از Accuracy/F1 تک‌برچسبی حذف می‌شوند.</p>
+
+      <p class="note">
+        این ارزیابی predictionهای ذخیره‌شده را با پاسخ‌های آموزشی CONFIRMED مقایسه می‌کند.
+      </p>
     </article>
   </section>
 
   <section class="card">
-    <div class="card-head">
-      <div><h2>Timeline پیش‌بینی وضعیت وسایل</h2><p class="muted">۲۴ ساعت اخیر؛ CONTINUATION وضعیت را دوباره toggle نمی‌کند.</p></div>
-      <button id="refresh">به‌روزرسانی</button>
+    <div class="section-head">
+      <div>
+        <h2>وضعیت پیش‌بینی‌شده وسایل</h2>
+        <p class="muted">بر اساس آخرین ON/OFF ثبت‌شده برای هر وسیله</p>
+      </div>
+      <button id="refresh" type="button">به‌روزرسانی</button>
     </div>
-    <div id="timeline" class="timeline"></div>
+
+    <div class="appliance-grid">
+      <article class="appliance-card" data-appliance="FRIDGE">
+        <div class="appliance-icon">❄️</div>
+        <div>
+          <h3>یخچال</h3>
+          <p id="state-FRIDGE" class="state unknown">نامشخص</p>
+          <small id="time-FRIDGE">—</small>
+        </div>
+      </article>
+
+      <article class="appliance-card" data-appliance="PORTABLE_AC">
+        <div class="appliance-icon">🌬️</div>
+        <div>
+          <h3>کولر پرتابل</h3>
+          <p id="state-PORTABLE_AC" class="state unknown">نامشخص</p>
+          <small id="time-PORTABLE_AC">—</small>
+        </div>
+      </article>
+
+      <article class="appliance-card" data-appliance="MAIN_ROOM_LIGHT">
+        <div class="appliance-icon">💡</div>
+        <div>
+          <h3>چراغ اتاق اصلی</h3>
+          <p id="state-MAIN_ROOM_LIGHT" class="state unknown">نامشخص</p>
+          <small id="time-MAIN_ROOM_LIGHT">—</small>
+        </div>
+      </article>
+    </div>
   </section>
 
   <section class="card">
-    <div class="card-head"><div><h2>روند اطمینان مدل</h2><p class="muted">آخرین predictionها؛ محور عمودی ۰ تا ۱۰۰٪.</p></div></div>
-    <div id="confidence-chart" class="chart-wrap"></div>
+    <h2>آخرین رویدادها</h2>
+    <div id="recent-list" class="recent-list"></div>
   </section>
 
-  <section class="split">
-    <article class="card">
-      <h2>عملکرد هر کلاس</h2>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>کلاس</th><th>P</th><th>R</th><th>F1</th><th>n</th></tr></thead>
-          <tbody id="class-metrics"></tbody>
-        </table>
-      </div>
-    </article>
+  <details class="card details-card">
+    <summary>جزئیات فنی و ارزیابی بیشتر</summary>
 
-    <article class="card">
-      <h2>آخرین مقایسه با پاسخ آموزشی</h2>
+    <div class="details-grid">
+      <div>
+        <h3>جزئیات آخرین prediction</h3>
+        <dl class="tech-list">
+          <div><dt>ΔI</dt><dd id="detail-delta">—</dd></div>
+          <div><dt>Routing</dt><dd id="detail-routing">—</dd></div>
+          <div><dt>Sequence</dt><dd id="detail-sequence">—</dd></div>
+          <div><dt>Model</dt><dd id="detail-model">—</dd></div>
+        </dl>
+      </div>
+
+      <div>
+        <h3>کلاس‌ها</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>کلاس</th><th>P</th><th>R</th><th>F1</th><th>n</th></tr>
+            </thead>
+            <tbody id="class-metrics"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <h3>آخرین مقایسه با پاسخ آموزشی</h3>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>زمان</th><th>مدل</th><th>Ground Truth</th><th>نتیجه</th></tr></thead>
+          <thead>
+            <tr><th>زمان</th><th>Prediction</th><th>Ground Truth</th><th>نتیجه</th></tr>
+          </thead>
           <tbody id="evaluation-history"></tbody>
         </table>
       </div>
-    </article>
-  </section>
-
-  <section class="card">
-    <h2>Recent detections</h2>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>زمان</th><th>وسیله</th><th>عمل</th><th>اطمینان</th><th>Sequence</th><th>وضعیت</th></tr></thead>
-        <tbody id="recent"></tbody>
-      </table>
     </div>
-  </section>
+  </details>
 
   <p id="status" class="status">در حال اتصال…</p>
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="./supabase-config.js"></script>
-<script src="./live-appliance-predictions.js"></script>
+<script src="./live-appliance-predictions-simple.js"></script>
 </body>
 </html>
