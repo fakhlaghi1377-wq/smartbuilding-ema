@@ -48,13 +48,14 @@
 <section class="card">
 <div class="head"><div><h2>وضعیت پیش‌بینی‌شده وسایل</h2><p class="muted">از interpreted prediction خوانده می‌شود؛ بار نامشخص علاوه بر ON/OFF، توان افزوده تقریبی را هم نشان می‌دهد.</p></div><button id="refresh">به‌روزرسانی</button></div>
 <div class="appliances">
- <div class="app"><b>❄️ یخچال</b><strong id="state-FRIDGE">نامشخص</strong><small id="time-FRIDGE">—</small></div>
- <div class="app"><b>🌬️ کولر پرتابل</b><strong id="state-PORTABLE_AC">نامشخص</strong><small id="time-PORTABLE_AC">—</small></div>
- <div class="app"><b>💡 چراغ اتاق اصلی</b><strong id="state-MAIN_ROOM_LIGHT">نامشخص</strong><small id="time-MAIN_ROOM_LIGHT">—</small></div>
+ <div class="app"><b>❄️ یخچال</b><strong id="state-FRIDGE">نامشخص</strong><small id="time-FRIDGE">—</small><div id="delta-FRIDGE" class="appliance-delta">ΔI: —</div></div>
+ <div class="app"><b>🌬️ کولر پرتابل</b><strong id="state-PORTABLE_AC">نامشخص</strong><small id="time-PORTABLE_AC">—</small><div id="delta-PORTABLE_AC" class="appliance-delta">ΔI: —</div></div>
+ <div class="app"><b>💡 چراغ اتاق اصلی</b><strong id="state-MAIN_ROOM_LIGHT">نامشخص</strong><small id="time-MAIN_ROOM_LIGHT">—</small><div id="delta-MAIN_ROOM_LIGHT" class="appliance-delta">ΔI: —</div></div>
  <div class="app unknown-load-card">
    <b>⚡ بار نامشخص</b>
    <strong id="state-UNKNOWN">نامشخص</strong>
    <small id="time-UNKNOWN">—</small>
+   <div id="delta-UNKNOWN" class="appliance-delta">ΔI: —</div>
    <div id="unknown-power" class="unknown-power">توان افزوده تقریبی: —</div>
    <div id="unknown-warning" class="load-warning neutral">در انتظار بار نامشخص</div>
  </div>

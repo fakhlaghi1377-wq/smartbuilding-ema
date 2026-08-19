@@ -30,13 +30,23 @@ function loadWarning(watts,action){
  if(watts>=150)return {text:"مصرف متوسط",klass:"low"};
  return {text:"مصرف کم",klass:"low"};
 }
+function formatDeltaA(value){
+ const n=Number(value);
+ if(!Number.isFinite(n))return "ΔI: —";
+ return `ΔI: ${n>=0?"+":""}${n.toFixed(3)} A`;
+}
 function states(rows){
  for(const a of ["FRIDGE","PORTABLE_AC","MAIN_ROOM_LIGHT","UNKNOWN"]){
    const r=rows.find(x=>(x.interpreted_appliance||x.predicted_appliance)===a&&x.sequence_role!=="CONTINUATION");
-   const e=$(`state-${a}`),t=$(`time-${a}`);
+   const e=$(`state-${a}`),t=$(`time-${a}`),d=$(`delta-${a}`);
    if(!e||!t)continue;
+
    if(!r){
-     e.textContent="نامشخص";e.className="";t.textContent="—";
+     e.textContent="نامشخص";
+     e.className="";
+     t.textContent="—";
+     if(d)d.textContent="ΔI: —";
+
      if(a==="UNKNOWN"){
        $("unknown-power").textContent="توان افزوده تقریبی: —";
        $("unknown-warning").textContent="در انتظار بار نامشخص";
@@ -44,15 +54,19 @@ function states(rows){
      }
      continue;
    }
+
    const act=r.interpreted_action||r.predicted_action;
-   e.textContent=faAct(act);e.className=act==="ON"?"on":"off";t.textContent=tm(r.event_started_at);
+   e.textContent=faAct(act);
+   e.className=act==="ON"?"on":"off";
+   t.textContent=tm(r.event_started_at);
+   if(d)d.textContent=formatDeltaA(r.current_delta_a);
 
    if(a==="UNKNOWN"){
      const watts=estimateAddedWatts(r.current_delta_a);
      $("unknown-power").textContent=
        act==="ON"
-       ? `توان افزوده تقریبی: ${Math.round(watts)} W · ΔI ${Number(r.current_delta_a)>=0?"+":""}${Number(r.current_delta_a).toFixed(3)} A`
-       : `آخرین ΔI: ${Number(r.current_delta_a)>=0?"+":""}${Number(r.current_delta_a).toFixed(3)} A`;
+       ? `توان افزوده تقریبی: ${Math.round(watts)} W`
+       : `توان کاهشی تقریبی: ${Math.round(watts)} W`;
      const w=loadWarning(watts,act);
      $("unknown-warning").textContent=w.text;
      $("unknown-warning").className=`load-warning ${w.klass}`;

@@ -157,3 +157,13 @@
   .load-event-chart{height:300px}
   .load-direct-label{display:none}
 }
+
+.appliance-delta{
+  margin-top:7px;
+  color:var(--muted);
+  font-size:12px;
+  font-weight:700;
+  direction:ltr;
+  text-align:right;
+  font-variant-numeric:tabular-nums;
+}
