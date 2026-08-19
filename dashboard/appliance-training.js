@@ -51,6 +51,7 @@
 
   const state = {
     todayEvents: [],
+    todayCount: 0,
     pendingEvents: [],
     unansweredEvents: [],
     current: null,
@@ -1437,7 +1438,7 @@
       : source === "unanswered"
         ? "در حال بررسی از فهرست پاسخ‌داده‌نشده‌ها"
         : "رویداد امروز";
-    $("queue-status").textContent = `${sourceText} · ${state.todayEvents.length} رویداد بدون پاسخ امروز`;
+    $("queue-status").textContent = `${sourceText} · ${state.todayCount} رویداد بدون پاسخ امروز`;
     $("event-id").textContent = `رویداد ${event.id}`;
     $("prediction-title").textContent = `تشخیص فعلی: ${labelFor(event.appliance_type, event.action)}`;
     $("event-status").textContent = `${event.status} · ${number(event.confidence, 3)}`;
@@ -1503,35 +1504,54 @@
   }
 
   async function loadTodayEvents({ silent = false } = {}) {
-    const response = await apiFetch(`${API}/today?limit=100`, { cache: "no-store" });
+    const response = await apiFetch(`${API}/today-snapshot`, {
+      cache: "no-store",
+    });
     const payload = await response.json();
-    if (!response.ok) throw new Error(payload.detail || "دریافت رویدادهای امروز ناموفق بود");
+    if (!response.ok) {
+      throw new Error(
+        payload.detail || "دریافت رویدادهای امروز ناموفق بود"
+      );
+    }
 
-    const incoming = normalizeEvents(payload.events);
-    const newestId = incoming.reduce((max, event) => Math.max(max, Number(event.id) || 0), 0);
-    if (state.initialEventsLoaded && newestId > (state.newestSeenEventId || 0)) {
+    const incoming = normalizeEvents(payload.events || []);
+    state.todayCount = Number(payload.count || 0);
+
+    const newestId = incoming.reduce(
+      (max, event) => Math.max(max, Number(event.id) || 0),
+      0,
+    );
+
+    if (
+      state.initialEventsLoaded
+      && newestId > (state.newestSeenEventId || 0)
+    ) {
       await playNewEventSound();
     }
-    state.newestSeenEventId = Math.max(state.newestSeenEventId || 0, newestId);
+
+    state.newestSeenEventId = Math.max(
+      state.newestSeenEventId || 0,
+      newestId,
+    );
     state.initialEventsLoaded = true;
     state.todayEvents = incoming;
-    $("today-count-badge").textContent = incoming.length;
+    $("today-count-badge").textContent =
+      state.todayCount.toLocaleString("fa-IR");
 
-    // A manually opened event from either the PENDING list or the complete
-    // unanswered list must stay on screen until the user answers it or
-    // explicitly selects another event. The five-second poll may update
-    // counters in the background, but it must not replace this event.
     if (state.current && state.currentSource !== "today") {
       const sourceTitle = state.currentSource === "pending"
         ? "فهرست پندینگ"
         : "فهرست پاسخ‌داده‌نشده‌ها";
       $("queue-status").textContent =
-        `در حال بررسی از ${sourceTitle} · ${incoming.length} رویداد بدون پاسخ امروز`;
+        `در حال بررسی از ${sourceTitle} · ${state.todayCount} رویداد بدون پاسخ امروز`;
       return;
     }
 
     const currentId = state.current ? Number(state.current.id) : null;
-    const stillExists = incoming.find((item) => Number(item.id) === currentId);
+    const stillExists = incoming.find(
+      (item) => Number(item.id) === currentId,
+    );
+
     if (silent && stillExists) return;
     renderEvent(incoming[0] || null, "today");
   }
@@ -2289,26 +2309,22 @@
     state.pollTick = 0;
 
     state.pollTimer = setInterval(async () => {
-      if (state.busy) return;
+      if (state.busy || document.visibilityState === "hidden") return;
 
       state.pollTick += 1;
 
       try {
-        // Keep new-event detection responsive.
         await loadTodayEvents({ silent: true });
 
-        // Open-cycle cards do not need a full rebuild every 5 seconds.
-        if (state.pollTick % 6 === 0) {
+        if (state.pollTick % 4 === 0) {
           await loadOpenSessions();
         }
 
-        // Cycle charts are much heavier; refresh once per minute.
-        if (state.pollTick % 12 === 0) {
+        if (state.pollTick % 20 === 0) {
           await loadCycleVisuals();
         }
 
-        // Large queue tables are refreshed only while visible, every 15 sec.
-        if (state.pollTick % 3 === 0) {
+        if (state.pollTick % 4 === 0) {
           if ($("unanswered-details").open) {
             await loadUnansweredEvents();
           }
@@ -2317,7 +2333,7 @@
           }
         }
       } catch (_) {}
-    }, 5000);
+    }, 15000);
   }
 
   $("combined-event-toggle").addEventListener(
@@ -2457,6 +2473,12 @@
     $("unanswered-count-badge").textContent = count;
     $("unanswered-summary-count").textContent = count;
   }
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && !state.busy) {
+      loadTodayEvents({ silent: true }).catch(() => {});
+    }
+  });
 
   renderUnknownPresets();
   updateSoundButton();
