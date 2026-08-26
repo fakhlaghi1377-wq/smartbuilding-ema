@@ -1214,9 +1214,6 @@
       );
     }
 
-    if (!(payload.sessions || []).length) {
-      payload.sessions = await historySessionsFallback(200, true);
-    }
     renderOpenSessions(payload);
   }
 
