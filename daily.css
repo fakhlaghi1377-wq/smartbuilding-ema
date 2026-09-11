@@ -256,13 +256,13 @@ footer{margin-top:27px;padding-top:16px;border-top:1px solid var(--border);color
 
 
 /* Final Q13 correction: only Yes / No */
-.survey-step[data-question="13"] .visual-grid.two{
+.survey-step[data-question="14"] .visual-grid.two{
     max-width:620px;
     margin-inline:auto;
     gap:16px;
 }
 @media(max-width:650px){
-    .survey-step[data-question="13"] .visual-grid.two{
+    .survey-step[data-question="14"] .visual-grid.two{
         grid-template-columns:repeat(2,minmax(0,1fr)) !important;
         gap:8px;
     }
@@ -542,7 +542,7 @@ legend{
 }
 
 /* Q13 only two options */
-.survey-step[data-question="13"] .visual-grid.two{
+.survey-step[data-question="14"] .visual-grid.two{
   max-width:620px!important;
   margin-inline:auto!important;
 }
@@ -555,4 +555,13 @@ legend{
   .room-grid .visual-option span{
     min-height:140px!important;
   }
+}
+
+/* Short explanatory text under selected survey questions */
+.question-hint {
+    margin: -2px 0 14px;
+    font-size: 0.88rem;
+    line-height: 1.7;
+    font-weight: 400;
+    opacity: 0.78;
 }

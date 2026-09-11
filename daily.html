@@ -47,7 +47,7 @@
 
     <form id="survey-form" class="view" novalidate>
         <div class="progress-row">
-            <span id="progress-label">سؤال ۱ از ۱۲</span>
+            <span id="progress-label">سؤال ۱ از ۱۳</span>
             <strong>حدود ۲ تا ۳ دقیقه</strong>
         </div>
         <div class="progress-track" aria-hidden="true">
@@ -97,7 +97,18 @@
 
         <section class="survey-step" data-question="4" data-accent="blue">
             <fieldset>
-                <legend><span class="question-number">۴</span> اکنون دمای اتاق را چگونه احساس می‌کنید؟</legend>
+                <legend><span class="question-number">۴</span> اکنون سطح فعالیت خود را چگونه ارزیابی می‌کنید؟</legend>
+                <div class="option-grid single-column icon-list">
+                    <label><input type="radio" name="activity" value="low" required><span><b class="custom-option-icon"><img src="./icons/activity-low.png" alt="فعالیت کم" loading="lazy" decoding="async"></b><em><strong>کم</strong></em><i></i></span></label>
+                    <label><input type="radio" name="activity" value="medium"><span><b class="custom-option-icon"><img src="./icons/activity-medium.png" alt="فعالیت متوسط" loading="lazy" decoding="async"></b><em><strong>متوسط</strong></em><i></i></span></label>
+                    <label><input type="radio" name="activity" value="high"><span><b class="custom-option-icon"><img src="./icons/activity-high.png" alt="فعالیت زیاد" loading="lazy" decoding="async"></b><em><strong>زیاد</strong></em><i></i></span></label>
+                </div>
+            </fieldset>
+        </section>
+
+        <section class="survey-step" data-question="5" data-accent="blue">
+            <fieldset>
+                <legend><span class="question-number">۵</span> اکنون دمای اتاق را چگونه احساس می‌کنید؟</legend>
                 <div class="visual-grid three">
                     <label class="visual-option cold"><input type="radio" name="thermal_sensation" value="-1" required><span><b class="custom-option-icon"><img src="./icons/temperature-cold.png" alt="دمای سرد" loading="lazy" decoding="async"></b><em>سرد</em><i></i></span></label>
                     <label class="visual-option neutral"><input type="radio" name="thermal_sensation" value="0"><span><b class="custom-option-icon"><img src="./icons/temperature-neutral.png" alt="دمای مناسب" loading="lazy" decoding="async"></b><em>مناسب</em><i></i></span></label>
@@ -106,9 +117,9 @@
             </fieldset>
         </section>
 
-        <section class="survey-step" data-question="5" data-accent="teal">
+        <section class="survey-step" data-question="6" data-accent="teal">
             <fieldset>
-                <legend><span class="question-number">۵</span> ترجیح می‌دهید دمای اتاق چگونه باشد؟</legend>
+                <legend><span class="question-number">۶</span> ترجیح می‌دهید دمای اتاق چگونه باشد؟</legend>
                 <div class="visual-grid three">
                     <label class="visual-option warm"><input type="radio" name="thermal_preference" value="-1" required><span><b class="custom-option-icon"><img src="./icons/preference-warmer.png" alt="گرم‌تر" loading="lazy" decoding="async"></b><em>گرم‌تر</em><i></i></span></label>
                     <label class="visual-option neutral"><input type="radio" name="thermal_preference" value="0"><span><b class="custom-option-icon"><img src="./icons/preference-no-change.png" alt="بدون تغییر" loading="lazy" decoding="async"></b><em>بدون تغییر</em><i></i></span></label>
@@ -117,9 +128,9 @@
             </fieldset>
         </section>
 
-        <section class="survey-step" data-question="6" data-accent="purple">
+        <section class="survey-step" data-question="7" data-accent="purple">
             <fieldset>
-                <legend><span class="question-number">۶</span> در مجموع از دمای اتاق چقدر راضی هستید؟</legend>
+                <legend><span class="question-number">۷</span> در مجموع از دمای اتاق چقدر راضی هستید؟</legend>
                 <div class="visual-grid three">
                     <label class="visual-option bad"><input type="radio" name="temperature_satisfaction" value="1" required><span><b class="custom-option-icon"><img src="./icons/satisfaction-dissatisfied.png" alt="ناراضی" loading="lazy" decoding="async"></b><em>ناراضی</em><i></i></span></label>
                     <label class="visual-option medium"><input type="radio" name="temperature_satisfaction" value="2"><span><b class="custom-option-icon"><img src="./icons/satisfaction-neutral.png" alt="خنثی" loading="lazy" decoding="async"></b><em>خنثی</em><i></i></span></label>
@@ -128,9 +139,10 @@
             </fieldset>
         </section>
 
-        <section class="survey-step" data-question="7" data-accent="green">
+        <section class="survey-step" data-question="8" data-accent="green">
             <fieldset>
-                <legend><span class="question-number">۷</span> کیفیت هوای اتاق را چگونه ارزیابی می‌کنید؟</legend>
+                <legend><span class="question-number">۸</span> کیفیت هوای اتاق را چگونه ارزیابی می‌کنید؟</legend>
+                <p class="question-hint">(با توجه به سنگینی هوا، وجود بو، میزان رطوبت یا گردوغبار)</p>
                 <div class="visual-grid three">
                     <label class="visual-option bad"><input type="radio" name="air_freshness" value="-1" required><span><b class="custom-option-icon"><img src="./icons/air-stuffy.png" alt="هوای گرفته" loading="lazy" decoding="async"></b><em>گرفته</em><i></i></span></label>
                     <label class="visual-option medium"><input type="radio" name="air_freshness" value="0"><span><b class="custom-option-icon"><img src="./icons/air-normal.png" alt="هوای معمولی" loading="lazy" decoding="async"></b><em>معمولی</em><i></i></span></label>
@@ -139,9 +151,9 @@
             </fieldset>
         </section>
 
-        <section class="survey-step" data-question="8" data-accent="blue">
+        <section class="survey-step" data-question="9" data-accent="blue">
             <fieldset>
-                <legend><span class="question-number">۸</span> آیا جریان هوا را احساس می‌کنید؟</legend>
+                <legend><span class="question-number">۹</span> آیا جریان هوا را احساس می‌کنید؟</legend>
                 <div class="visual-grid two">
                     <label class="visual-option good"><input type="radio" name="air_movement" value="1" required><span><b class="custom-option-icon"><img src="./icons/airflow-yes.png" alt="احساس جریان هوا" loading="lazy" decoding="async"></b><em>بله</em><i></i></span></label>
                     <label class="visual-option neutral"><input type="radio" name="air_movement" value="0"><span><b class="custom-option-icon"><img src="./icons/airflow-no.png" alt="عدم احساس جریان هوا" loading="lazy" decoding="async"></b><em>خیر</em><i></i></span></label>
@@ -149,9 +161,9 @@
             </fieldset>
         </section>
 
-        <section id="air-source-step" class="survey-step conditional-step" data-question="9" data-condition="air-source" data-accent="orange">
+        <section id="air-source-step" class="survey-step conditional-step" data-question="10" data-condition="air-source" data-accent="orange">
             <fieldset>
-                <legend><span class="question-number">۹</span> بیشترِ جریان هوایی که احساس می‌کنید از کجا می‌آید؟</legend>
+                <legend><span class="question-number">۱۰</span> بیشترِ جریان هوایی که احساس می‌کنید از کجا می‌آید؟</legend>
                 <div class="option-grid single-column icon-list">
                     <label><input type="radio" name="airflow_source" value="window" required><span><b class="custom-option-icon"><img src="./icons/source-window.png" alt="پنجره" loading="lazy" decoding="async"></b><em>پنجره</em><i></i></span></label>
                     <label><input type="radio" name="airflow_source" value="hvac_vent"><span><b class="custom-option-icon"><img src="./icons/source-hvac.png" alt="دریچه کولر یا بخاری" loading="lazy" decoding="async"></b><em>دریچه کولر یا بخاری</em><i></i></span></label>
@@ -162,9 +174,9 @@
             </fieldset>
         </section>
 
-        <section class="survey-step" data-question="10" data-accent="purple">
+        <section class="survey-step" data-question="11" data-accent="purple">
             <fieldset>
-                <legend><span class="question-number">۱۰</span> میزان نور اتاق را چگونه ارزیابی می‌کنید؟</legend>
+                <legend><span class="question-number">۱۱</span> میزان نور اتاق را چگونه ارزیابی می‌کنید؟</legend>
                 <div class="visual-grid three">
                     <label class="visual-option low"><input type="radio" name="light_level" value="1" required><span><b class="custom-option-icon"><img src="./icons/light-low.png" alt="نور کم" loading="lazy" decoding="async"></b><em>کم</em><i></i></span></label>
                     <label class="visual-option medium"><input type="radio" name="light_level" value="2"><span><b class="custom-option-icon"><img src="./icons/light-suitable.png" alt="نور مناسب" loading="lazy" decoding="async"></b><em>مناسب</em><i></i></span></label>
@@ -173,9 +185,9 @@
             </fieldset>
         </section>
 
-        <section class="survey-step" data-question="11" data-accent="teal">
+        <section class="survey-step" data-question="12" data-accent="teal">
             <fieldset>
-                <legend><span class="question-number">۱۱</span> اکنون چقدر احساس خواب‌آلودگی می‌کنید؟</legend>
+                <legend><span class="question-number">۱۲</span> اکنون چقدر احساس خواب‌آلودگی می‌کنید؟</legend>
                 <div class="visual-grid four">
                     <label class="visual-option"><input type="radio" name="sleepiness" value="1" required><span><b class="custom-option-icon"><img src="./icons/sleep-alert.png" alt="اصلاً خواب‌آلود نیستم" loading="lazy" decoding="async"></b><em>اصلاً</em><i></i></span></label>
                     <label class="visual-option"><input type="radio" name="sleepiness" value="2"><span><b class="custom-option-icon"><img src="./icons/sleep-low.png" alt="خواب‌آلودگی کم" loading="lazy" decoding="async"></b><em>کم</em><i></i></span></label>
@@ -185,9 +197,10 @@
             </fieldset>
         </section>
 
-        <section class="survey-step" data-question="12" data-accent="green">
+        <section class="survey-step" data-question="13" data-accent="green">
             <fieldset>
-                <legend><span class="question-number">۱۲</span> در مجموع، اکنون چقدر احساس راحتی می‌کنید؟</legend>
+                <legend><span class="question-number">۱۳</span> با در نظر گرفتن همه شرایط محیطی اتاق، اکنون در مجموع چقدر احساس راحتی می‌کنید؟</legend>
+                <p class="question-hint">(منظور فقط دمای اتاق نیست؛ کیفیت هوا، جریان هوا، نور و سایر شرایط محیطی را نیز در نظر بگیرید.)</p>
                 <div class="visual-grid three">
                     <label class="visual-option bad"><input type="radio" name="overall_comfort" value="1" required><span><b class="custom-option-icon"><img src="./icons/comfort-uncomfortable.png" alt="ناراحت" loading="lazy" decoding="async"></b><em>ناراحت</em><i></i></span></label>
                     <label class="visual-option medium"><input type="radio" name="overall_comfort" value="2"><span><b class="custom-option-icon"><img src="./icons/comfort-neutral.png" alt="خنثی" loading="lazy" decoding="async"></b><em>خنثی</em><i></i></span></label>
@@ -196,9 +209,9 @@
             </fieldset>
         </section>
 
-        <section class="survey-step" data-question="13" data-accent="blue">
+        <section class="survey-step" data-question="14" data-accent="blue">
             <fieldset>
-                <legend><span class="question-number">۱۳</span> از زمان پرسشنامه قبلی، آیا پنجره را بسته‌اید؟</legend>
+                <legend><span class="question-number">۱۴</span> از زمان پرسشنامه قبلی، آیا پنجره را بسته‌اید؟</legend>
                 <div class="visual-grid two">
                     <label class="visual-option neutral"><input type="radio" name="window_closed_since_previous" value="no" required><span><b class="custom-option-icon"><img src="./icons/window-not-closed.png" alt="پنجره را نبسته‌ام" loading="lazy" decoding="async"></b><em>خیر</em><i></i></span></label>
                     <label class="visual-option good"><input type="radio" name="window_closed_since_previous" value="yes"><span><b class="custom-option-icon"><img src="./icons/window-closed.png" alt="پنجره را بسته‌ام" loading="lazy" decoding="async"></b><em>بله</em><i></i></span></label>
@@ -206,9 +219,9 @@
             </fieldset>
         </section>
 
-        <section id="closing-reason-step" class="survey-step conditional-step" data-question="14" data-condition="closing-reason" data-accent="orange">
+        <section id="closing-reason-step" class="survey-step conditional-step" data-question="15" data-condition="closing-reason" data-accent="orange">
             <fieldset>
-                <legend><span class="question-number">۱۴</span> دلیل اصلی بستن پنجره چه بود؟</legend>
+                <legend><span class="question-number">۱۵</span> دلیل اصلی بستن پنجره چه بود؟</legend>
                 <div class="option-grid single-column icon-list">
                     <label><input type="radio" name="window_closing_reason" value="felt_cold" required><span><b class="custom-option-icon"><img src="./icons/reason-cold.png" alt="احساس سرما" loading="lazy" decoding="async"></b><em>احساس سرما می‌کردم</em><i></i></span></label>
                     <label><input type="radio" name="window_closing_reason" value="temperature_became_comfortable"><span><b class="custom-option-icon"><img src="./icons/reason-temperature-comfortable.png" alt="دمای اتاق مناسب شده بود" loading="lazy" decoding="async"></b><em>دمای اتاق مناسب شده بود</em><i></i></span></label>

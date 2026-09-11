@@ -300,11 +300,11 @@ async function submitSurvey(event) {
     const activeStep = activeStepElement();
     const windowAnswer = selectedValue("window_closed_since_previous");
 
-    if (activeStep && activeStep.dataset.question === "13" && windowAnswer === "yes") {
+    if (activeStep && activeStep.dataset.question === "14" && windowAnswer === "yes") {
         updateConditionalAnswers();
         const steps = visibleSteps();
         const q14 = steps.findIndex(function (step) {
-            return step.dataset.question === "14";
+            return step.dataset.question === "15";
         });
 
         if (q14 !== -1) {
@@ -325,7 +325,7 @@ async function submitSurvey(event) {
         : null;
 
     const answers = {
-        questionnaire_version: "DAILY_SURVEY_V6_MOBILE_UNIFIED_Q13_FINAL",
+        questionnaire_version: "DAILY_SURVEY_V7_ACTIVITY_ADDED",
         survey_slot: loadedSurvey?.survey_slot || null,
         survey_date: loadedSurvey?.survey_date || null,
 
@@ -335,6 +335,7 @@ async function submitSurvey(event) {
             : null,
         occupancy_count: formData.get("occupancy_count"),
         clothing_level: formData.get("clothing_level"),
+        activity: formData.get("activity"),
 
         thermal_sensation: numericValue(formData, "thermal_sensation"),
         thermal_preference: numericValue(formData, "thermal_preference"),
@@ -363,7 +364,7 @@ async function submitSurvey(event) {
     if (closedWindow === "yes" && !closingReason) {
         const steps = visibleSteps();
         const q14 = steps.findIndex(function (step) {
-            return step.dataset.question === "14";
+            return step.dataset.question === "15";
         });
 
         if (q14 !== -1) {
