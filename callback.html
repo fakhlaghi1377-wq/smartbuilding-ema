@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>فعال‌سازی حساب | Smart Building</title>
+<style>
+:root{font-family:Tahoma,Arial,sans-serif;color:#18313b;background:#f3f8fa}*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:18px}.panel{width:min(100%,430px);background:white;border:1px solid #dbe7e9;border-radius:22px;padding:30px;box-shadow:0 18px 60px #23445414}h1{margin:0 0 10px;font-size:25px}p{line-height:1.9;color:#506873}.mark{display:inline-flex;background:#dff4ef;color:#087f70;padding:8px 12px;border-radius:12px;font-weight:bold;margin-bottom:20px}label{display:block;margin:20px 0 8px}input{width:100%;padding:13px;border:1px solid #b7cbd0;border-radius:11px;font-size:16px;direction:ltr}button{width:100%;padding:14px;background:#087f70;color:white;border:0;border-radius:12px;margin-top:18px;font-size:16px;cursor:pointer}button:disabled{opacity:.5;cursor:default}#status{padding:12px;border-radius:10px;background:#eef5f7;margin:18px 0 0;line-height:1.8}small{color:#657a82}
+</style>
+</head>
+<body><main class="panel"><div class="mark">SMART BUILDING</div><h1>فعال‌سازی حساب</h1><p>پس از بازکردن لینک دعوت، رمز عبور اختصاصی خود را تعیین کنید.</p><div id="status" role="status">در حال بررسی لینک دعوت…</div><form id="form" hidden><label for="password">رمز عبور جدید (حداقل ۸ کاراکتر)</label><input id="password" type="password" minlength="8" autocomplete="new-password" required><label for="confirm">تکرار رمز عبور</label><input id="confirm" type="password" minlength="8" autocomplete="new-password" required><button id="submit" type="submit">فعال‌سازی حساب</button></form><p><small>اگر لینک منقضی شده است، از پژوهشگر بخواهید دعوت‌نامه تازه ارسال کند.</small></p></main>
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+const URL='https://rarytoivpexnqfdtebsx.supabase.co';
+const KEY='sb_publishable_Mv7kzCdhAytHLGszxBDpeA_zEoexIiC';
+const client=createClient(URL,KEY,{auth:{detectSessionInUrl:true,persistSession:false,autoRefreshToken:false}});
+const status=document.getElementById('status');const form=document.getElementById('form');const submit=document.getElementById('submit');
+function show(message){status.textContent=message}
+async function initialize(){
+  const params=new URLSearchParams(location.search);const hash=new URLSearchParams(location.hash.slice(1));
+  if(params.get('error')||hash.get('error')){show('لینک نامعتبر است: '+(params.get('error_description')||hash.get('error_description')||'خطای تأیید'));return}
+  try{
+    if(params.has('code')){const {error}=await client.auth.exchangeCodeForSession(params.get('code'));if(error)throw error}
+    else if(hash.has('access_token')&&hash.has('refresh_token')){const {error}=await client.auth.setSession({access_token:hash.get('access_token'),refresh_token:hash.get('refresh_token')});if(error)throw error}
+    else if(params.has('token_hash')&&params.has('type')){const {error}=await client.auth.verifyOtp({token_hash:params.get('token_hash'),type:params.get('type')});if(error)throw error}
+    const {data:{session},error}=await client.auth.getSession();if(error)throw error;
+    if(!session){show('نشست معتبری پیدا نشد. لینک دعوت جدید درخواست کنید.');return}
+    history.replaceState(null,'',location.pathname);show('دعوت تأیید شد. رمز عبور جدید را وارد کنید.');form.hidden=false;
+  }catch(e){show('تأیید لینک موفق نبود: '+(e.message||String(e)))}
+}
+form.addEventListener('submit',async e=>{e.preventDefault();const password=document.getElementById('password').value;const confirm=document.getElementById('confirm').value;if(password!==confirm){show('دو رمز عبور یکسان نیستند.');return}submit.disabled=true;show('در حال ذخیره رمز عبور…');try{const {error}=await client.auth.updateUser({password});if(error)throw error;form.hidden=true;show('حساب با موفقیت فعال شد. پس از آماده‌شدن اپ Smart Building می‌توانید با ایمیل و رمز عبور وارد شوید.');await client.auth.signOut()}catch(e){show('خطا در ثبت رمز عبور: '+(e.message||String(e)))}finally{submit.disabled=false}});
+initialize();
+</script></body></html>
