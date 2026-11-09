@@ -73,7 +73,8 @@ const ENERGY_COLUMNS = [
     "vibration_active_ms",
     "vibration_activity_percent",
     "vibration_active",
-    "portable_ac_on"
+    "portable_ac_on",
+    "heating_on"
 ].join(",");
 
 const WINDOW_COLUMNS = [
@@ -543,6 +544,37 @@ function updateCoolingCards(rows) {
         "portable-ac-details",
         `Vibration: ${Number(latest.vibration_pulse_count) || 0} pulses · ${formatNumber(latest.vibration_activity_percent, 2)}%${isStale ? ` · Latest sample: ${formatDateTime(latest.recorded_at)}` : ""}`
     );
+}
+
+
+function updateHeatingCard(reading) {
+    const badge = byId("heating-badge");
+    if (!badge) return;
+
+    if (!reading?.recorded_at) {
+        badge.textContent = "NO DATA";
+        badge.className = "large-badge neutral";
+        setText("heating-details", "No heating measurements available");
+        return;
+    }
+
+    const ageMs = Date.now() - new Date(reading.recorded_at).getTime();
+    const stale = !Number.isFinite(ageMs) || ageMs > 2 * 60 * 1000;
+    if (stale) {
+        badge.textContent = "STALE DATA";
+        badge.className = "large-badge neutral";
+    } else if (reading.heating_on === true) {
+        badge.textContent = "ON";
+        badge.className = "large-badge success";
+    } else if (reading.heating_on === false) {
+        badge.textContent = "OFF";
+        badge.className = "large-badge cooling-off";
+    } else {
+        badge.textContent = "NO SERVER STATUS";
+        badge.className = "large-badge neutral";
+    }
+
+    setText("heating-details", `Heating button state · Latest sample: ${formatDateTime(reading.recorded_at)}`);
 }
 
 
@@ -1264,6 +1296,19 @@ function updatePortableAcHistoryChart(rows, historyHours) {
     );
 }
 
+
+function updateHeatingHistoryChart(rows, historyHours) {
+    updateStoredStateHistoryChart(
+        rows,
+        historyHours,
+        "heating_on",
+        "heatingState",
+        "heating-state-chart",
+        "#ea580c",
+        "Heating"
+    );
+}
+
 function updateStoredStateHistoryChart(rows, historyHours, field, chartName, canvasId, color, label) {
     const points = [...(rows || [])]
         .filter((row) => Number.isFinite(new Date(row?.recorded_at).getTime()))
@@ -1444,13 +1489,17 @@ async function refreshDashboard() {
         if (outdoorHistoryResult.status === "fulfilled") updateOutdoorCharts(outdoorHistoryResult.value, hours);
         else console.error("Outdoor history refresh failed:", outdoorHistoryResult.reason);
 
-        if (latestEnergyResult.status === "fulfilled") updateLatestEnergy(latestEnergyResult.value);
+        if (latestEnergyResult.status === "fulfilled") {
+            updateLatestEnergy(latestEnergyResult.value);
+            updateHeatingCard(latestEnergyResult.value);
+        }
         else console.error("Latest energy refresh failed:", latestEnergyResult.reason);
 
         if (energyHistoryResult.status === "fulfilled") {
             updateEnergyCharts(energyHistoryResult.value, hours);
             updateCoolingCards(energyHistoryResult.value);
             updatePortableAcHistoryChart(energyHistoryResult.value, hours);
+            updateHeatingHistoryChart(energyHistoryResult.value, hours);
         }
         else console.error("Energy history refresh failed:", energyHistoryResult.reason);
 

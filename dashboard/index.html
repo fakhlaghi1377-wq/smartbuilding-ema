@@ -43,7 +43,7 @@
         <nav class="dashboard-nav" aria-label="Dashboard sections">
             <button class="nav-button active" type="button" data-page-target="environment">Environment</button>
             <button class="nav-button" type="button" data-page-target="outdoor">Outdoor Weather</button>
-            <button class="nav-button" type="button" data-page-target="energy">Energy & Cooling</button>
+            <button class="nav-button" type="button" data-page-target="energy">Energy, Cooling & Heating</button>
             <button class="nav-button" type="button" data-page-target="window">Window</button>
             <button class="nav-button" type="button" data-page-target="surveys">Questionnaires</button>
         </nav>
@@ -231,6 +231,11 @@
                 
                 
                 
+                <article class="data-card energy-card heating-card">
+                    <h3>Heating</h3>
+                    <div id="heating-badge" class="large-badge neutral">NO DATA</div>
+                    <p id="heating-details" class="sensor-label">Waiting for heating status…</p>
+                </article>
                 <article class="data-card energy-card training-card">
                     <h3>Appliance Cloud Training</h3>
                     <a class="training-card-button" href="appliance-training.html">Open Training Dashboard</a>
@@ -245,7 +250,7 @@
 
             <section class="charts-heading dashboard-page-section" data-dashboard-page="energy">
                 <div>
-                    <h2>Energy Trends & Sensor-Based Cooling</h2>
+                    <h2>Energy Trends, Cooling & Heating</h2>
                     <p id="energy-history-summary">Loading history…</p>
                 </div>
             </section>
@@ -254,6 +259,7 @@
                 <article class="chart-card"><h3>Real Power History</h3><div class="chart-container"><canvas id="power-chart"></canvas></div></article>
                 <article class="chart-card"><h3>Cumulative Energy History</h3><div class="chart-container"><canvas id="energy-total-chart"></canvas></div></article>
                 <article class="chart-card appliance-history-card"><h3>Portable AC — Vibration Sensor</h3><div class="chart-container appliance-state-chart"><canvas id="portable-ac-state-chart"></canvas></div></article>
+                <article class="chart-card appliance-history-card"><h3>Heating — ON / OFF History</h3><div class="chart-container appliance-state-chart"><canvas id="heating-state-chart"></canvas></div></article>
                 
                 
             </section>
